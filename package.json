@@ -1,0 +1,73 @@
+{
+  "name": "limbic",
+  "version": "0.0.1",
+  "description": "Local-first, emotion-aware, LLM-agnostic memory engine for TypeScript — scoring, decay and GIST diversity retrieval with zero required dependencies.",
+  "license": "Apache-2.0",
+  "author": "Redrum624",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "bench": "vitest bench --run"
+  },
+  "keywords": [
+    "memory",
+    "llm",
+    "agent",
+    "local-first",
+    "embeddings",
+    "diversity",
+    "gist",
+    "retrieval",
+    "ollama"
+  ],
+  "peerDependencies": {
+    "@huggingface/transformers": "*",
+    "better-sqlite3": "*",
+    "node-llama-cpp": "*"
+  },
+  "peerDependenciesMeta": {
+    "@huggingface/transformers": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    },
+    "node-llama-cpp": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^22.20.1",
+    "better-sqlite3": "^13.0.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}
