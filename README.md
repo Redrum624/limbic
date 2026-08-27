@@ -2,7 +2,10 @@
 
 **Local-first, emotion-aware agent memory for TypeScript.** Importance, decay, emotional salience and diversity-aware retrieval — fully offline, LLM-agnostic, zero cloud calls.
 
-> Status: **planning / pre-0.1** — no code yet; now a git repository; npm name still unclaimed but **re-verified available 2026-08-26** (registry 404). The implementation plan lives at
+> Status: **pre-0.1, in progress** — the build harness (TypeScript strict, tsup dual ESM/CJS, vitest, CI on node 20 and 22),
+> the core types and the storage layer (`MemStore` plus an optional `better-sqlite3` `SqliteStore`) are in.
+> The npm name is **still unclaimed**: `npm publish` has not run, so treat availability as unverified from here on.
+> The implementation plan lives at
 > [`docs/superpowers/plans/2026-08-21-limbic-v0.1.md`](docs/superpowers/plans/2026-08-21-limbic-v0.1.md).
 
 **Upstream status (verified 2026-08-26):**
