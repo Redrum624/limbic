@@ -1,6 +1,6 @@
 {
   "name": "limbic",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Local-first, emotion-aware, LLM-agnostic memory engine for TypeScript — scoring, decay and GIST diversity retrieval with zero required dependencies.",
   "license": "Apache-2.0",
   "author": "Redrum624",

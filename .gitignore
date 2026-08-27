@@ -4,3 +4,4 @@ dist-types/
 *.tsbuildinfo
 .DS_Store
 coverage/
+*.tgz
