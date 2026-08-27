@@ -159,3 +159,49 @@ describe("GIST conformance — all 22 cases, none skipped", () => {
     });
   }
 });
+
+/**
+ * Conformance is the bound above. This is the *claim the README makes on top of
+ * it* — that `src/internal/gist.ts` reproduces divsel's `f32` kernel rather than
+ * computing in `f64`, so the numbers agree bit-for-bit and not merely inside a
+ * tolerance. A prose claim rots; an assertion does not.
+ *
+ * The gate is 0.1% of each field's own budget rather than exact equality, for
+ * one reason: ECMA-262 specifies `Math.sqrt` as "implementation-approximated"
+ * rather than correctly rounded, so a future engine could legally move the
+ * euclidean distances by an ulp. Measured on Node 24.13 / Windows x64 the worst
+ * share is **0** — every one of the 22 cases reproduces every field exactly —
+ * and the number is logged so a regression is visible before it is fatal.
+ */
+describe("f32 kernel fidelity — tighter than conformance requires", () => {
+  it("uses at most 0.1% of any field's tolerance budget", () => {
+    let worstShare = 0;
+    let worstLabel = "every field exact";
+    for (const c of golden.cases) {
+      const r = gistSelectFull(c.vectors, c.utilities, c.k, c.lam, c.eps, {
+        metric: c.metric,
+        utility: c.utility,
+        exhaustiveThresholds: c.exhaustive_thresholds,
+        diameter: c.diameter,
+        diameterSweeps: c.diameter_sweeps,
+      });
+      const fields: Array<[string, number, number, number]> = [
+        ["g", r.g, c.expected_g, tol(c.expected_g)],
+        ["div", r.div, c.expected_div, tol(c.expected_div)],
+        ["d_max", r.dMax, c.expected_d_max, tol(c.expected_d_max)],
+        ["threshold", r.threshold, c.expected_threshold, tol(c.expected_threshold)],
+        ["f", r.f, c.expected_f, tol(c.expected_g) + c.lam * tol(c.expected_div)],
+      ];
+      for (const [field, actual, expected, bound] of fields) {
+        const share = Math.abs(actual - expected) / bound;
+        if (share > worstShare) {
+          worstShare = share;
+          worstLabel = `${c.name}.${field}: |a-e| = ${Math.abs(actual - expected)}, bound ${bound}`;
+        }
+      }
+    }
+    // eslint-disable-next-line no-console
+    console.log(`worst tolerance-budget share over 22 cases x 5 fields: ${worstShare} (${worstLabel})`);
+    expect(worstShare).toBeLessThanOrEqual(1e-3);
+  });
+});

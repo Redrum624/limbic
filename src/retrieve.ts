@@ -29,6 +29,7 @@
  */
 
 import { gistSelectFull } from "./diversity.js";
+import { Points } from "./internal/gist.js";
 import { DEFAULT_ALL_LIMIT, comparePool } from "./internal/store-shared.js";
 import { extractKeywords, scoreMemory } from "./internal/scoring.js";
 import type { MemoryStore } from "./store.js";
@@ -155,7 +156,20 @@ export function diversify(
   // `_fill_preserving_spread`: top up towards k without lowering div(chosen).
   const rowOf = new Map<number, number>();
   for (const [row, position] of embedded.entries()) rowOf.set(position, row);
-  const distance = (a: number, b: number): number => cosineDistance(rows[a]!, rows[b]!);
+  // The floor came out of GIST's own f32 kernel, so the distances compared
+  // against it must come from the same one. Recomputing them in f64 here would
+  // put a ~1e-7 gap between the two sides of a `<` that decides membership.
+  let points: Points;
+  try {
+    points = new Points(rows, "cosine");
+  } catch {
+    // A zero-norm row cannot be normalised; GIST would have thrown above, so
+    // this is unreachable in practice. Return the picks unfilled rather than
+    // falling back to score order, which would re-open the defect the floor
+    // exists to close.
+    return [...chosen].sort((a, b) => a - b).map((i) => pool[i]!);
+  }
+  const distance = (a: number, b: number): number => points.dist(a, b);
 
   for (let i = 0; i < pool.length && chosen.size < k; i++) {
     if (chosen.has(i)) continue;
@@ -216,23 +230,4 @@ export async function retrieve(
   const scored = scorePool(rows, scoreQuery, now, weights).slice(0, pool);
   if (options.diversify === false) return scored.slice(0, k);
   return diversify(scored, k, options.lambda ?? DEFAULT_LAMBDA);
-}
-
-/**
- * `clamp(1 - a.b, 0, 2)` on L2-normalised rows — the same cosine distance
- * `gistSelectFull` uses, recomputed here for the fill's floor test.
- */
-function cosineDistance(a: Float32Array, b: Float32Array): number {
-  let dot = 0;
-  let na = 0;
-  let nb = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i]! * b[i]!;
-    na += a[i]! * a[i]!;
-    nb += b[i]! * b[i]!;
-  }
-  const norm = Math.sqrt(na) * Math.sqrt(nb);
-  if (norm === 0 || !Number.isFinite(norm)) return 0;
-  const raw = 1 - dot / norm;
-  return raw < 0 ? 0 : raw > 2 ? 2 : raw;
 }
