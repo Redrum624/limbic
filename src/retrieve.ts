@@ -1,7 +1,7 @@
 /**
  * The retrieval pipeline: score the pool, then diversify it with GIST.
  *
- * Ported from the origin engine `server/memory/retrieval_service.py` — `retrieve_relevant`
+ * Ported from the origin engine's `server/memory/retrieval_service.py` — `retrieve_relevant`
  * and the `_apply_diversity` / `_fill_preserving_spread` pair (`:300-424`).
  *
  * The shape is deliberately the origin engine's, including the parts that look like
@@ -46,7 +46,7 @@ export interface ScoredMemory {
 export interface RetrieveOptions {
   /** How many rows to score before diversifying. Default 50. */
   pool?: number;
-  /** GIST's diversity weight. Default 0.5 — the origin engine's `ORIGIN_MEMORY_LAMBDA`. */
+  /** GIST's diversity weight. Default 0.5, the origin engine's default. */
   lambda?: number;
   /** Channel weights. Default {@link DEFAULT_WEIGHTS}. */
   weights?: ScoreWeights;
@@ -60,16 +60,16 @@ export interface RetrieveOptions {
   diversify?: boolean;
 }
 
-/** The default scored-pool size (`ORIGIN_MEMORY_POOL`). */
+/** The default scored-pool size, matching the origin engine's pool setting. */
 export const DEFAULT_POOL = 50;
 
-/** The default diversity weight — the origin engine's `ORIGIN_MEMORY_LAMBDA`, not divsel's 1.0. */
+/** The default diversity weight — the origin engine's default, not divsel's 1.0. */
 export const DEFAULT_LAMBDA = 0.5;
 
 /**
  * Embed `query` once, or return `undefined`. **Never rejects.**
  *
- * the origin engine's rule: an embedding failure degrades the cosine channel to MISSING and
+ * The origin engine's rule: an embedding failure degrades the cosine channel to MISSING and
  * costs nothing else. `scoreMemory` already treats a missing vector as
  * "cannot be compared" rather than as a similarity of 0, so there is nothing
  * further to handle downstream.
@@ -107,7 +107,7 @@ export function scorePool(
 }
 
 /**
- * the origin engine's `_apply_diversity`: pick at most `k` diverse-and-high-scoring rows out
+ * The origin engine's `_apply_diversity`: pick at most `k` diverse-and-high-scoring rows out
  * of an already-sorted pool, returned in pool order.
  */
 export function diversify(

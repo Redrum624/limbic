@@ -31,7 +31,7 @@ interface FixtureProvenance {
 export const FIXTURES: readonly FixtureProvenance[] = [
   {
     file: "golden-scoring.json",
-    upstream: "the origin engine (the origin engine, private) — C:\\Dev\\the origin engine",
+    upstream: "a private Python engine by the same author",
     upstreamPath: "test-assets/memory/golden-scoring.json",
     sourceCommit: "4a307a3b3553eb0b3d112f9c24649628a9c6ed04",
     upstreamHeadAtCopy: "ff9c407cd292848155a6c2982ccc4d185c518b5b",
@@ -41,7 +41,7 @@ export const FIXTURES: readonly FixtureProvenance[] = [
   },
   {
     file: "golden-selection.json",
-    upstream: "divsel (Redrum624/divsel, public) — C:\\Dev\\divsel",
+    upstream: "divsel (Redrum624/divsel, public) — https://github.com/Redrum624/divsel",
     upstreamPath: "test-assets/golden-selection.json",
     // divsel rewrote its history on 2026-08-26 (`d022aef`), so this commit is
     // the post-rewrite hash of the change that completed the fixture to 22

@@ -1,7 +1,7 @@
 /**
  * limbic core types — the 0.1.0 public type surface.
  *
- * Ported from the origin engine's production Python memory engine:
+ * Ported from the origin engine, a production Python memory engine:
  *   - `server/memory/models.py`            (`Memory`, `Conversation`)
  *   - `server/memory/memory_extraction.py` (`ExtractedMemory`, `feeling` default "neutral")
  *   - `server/memory/retrieval_service.py` (scoring weights, half-life, blend)
@@ -24,7 +24,7 @@ export type MemoryCategory =
 /**
  * The emotional reading limbic scores on.
  *
- * the origin engine reads the *source conversation's* detected emotion through
+ * The origin engine reads the *source conversation's* detected emotion through
  * `_get_emotion_for_message(source_message_id)`, backed by an in-process cache
  * plus an unimplemented conversations-table lookup. limbic does not store
  * conversations, so the caller supplies the pair directly at `remember()` time
@@ -84,7 +84,7 @@ export interface ScoreWeights {
   emotion: number;
 }
 
-/** the origin engine `retrieval_service.py` RECENCY/IMPORTANCE/RELEVANCE/EMOTION_WEIGHT. */
+/** The origin engine's `retrieval_service.py` RECENCY/IMPORTANCE/RELEVANCE/EMOTION_WEIGHT. */
 export const DEFAULT_WEIGHTS: ScoreWeights = {
   recency: 0.25,
   importance: 0.35,
@@ -92,5 +92,5 @@ export const DEFAULT_WEIGHTS: ScoreWeights = {
   emotion: 0.15,
 };
 
-/** `final = 0.7*base + 0.3*max(0, cosine)` — the origin engine `COSINE_WEIGHT`. */
+/** `final = 0.7*base + 0.3*max(0, cosine)` — the origin engine's `COSINE_WEIGHT`. */
 export const EMBED_BLEND = 0.3;

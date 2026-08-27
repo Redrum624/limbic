@@ -10,9 +10,9 @@ changing what "parity" means.
 
 | Field | Value |
 |---|---|
-| Upstream repo | `the origin engine` (`the origin engine`, private) — local checkout `the origin engine's checkout` |
+| Upstream | A private Python engine by the same author ("the origin engine") |
 | Upstream path | `test-assets/memory/golden-scoring.json` |
-| Produced by | the origin engine memory-plan Task 9 (`server/memory/retrieval_service.py` is the only definition of these numbers) |
+| Produced by | The origin engine's memory plan, Task 9 (`server/memory/retrieval_service.py` is the only definition of these numbers) |
 | Source commit (file last changed) | `4a307a3b3553eb0b3d112f9c24649628a9c6ed04` — *"docs(memory): the SPEC and the two golden fixtures a port conforms to"*, 2026-08-26 |
 | Upstream `HEAD` when copied | `ff9c407cd292848155a6c2982ccc4d185c518b5b` (2026-08-27) |
 | Copied on | 2026-08-27 |
@@ -31,7 +31,7 @@ and both `expected_order_*` arrays, at the fixture's own tolerance —
 per-memory `channels` block is *display-rounded to 6 dp* upstream, so it is
 useful for diagnosis and is **not** an assertion target.
 
-**Clock.** Recency is measured against `now = 2026-08-26T12:00:00`. the origin engine's
+**Clock.** Recency is measured against `now = 2026-08-26T12:00:00`. The origin engine's
 `_calculate_recency_score` reads `datetime.now()` directly; limbic's
 `scoreMemory` takes `now` as an explicit argument and never reads the wall
 clock, which is what makes this fixture evaluable at all.
@@ -44,7 +44,7 @@ A port that substituted `0.0` would return `0.7 * 0.425 = 0.2975` and fail.
 
 | Field | Value |
 |---|---|
-| Upstream repo | `divsel` (`Redrum624/divsel`, public) — local checkout `C:\Dev\divsel` |
+| Upstream | `divsel` — https://github.com/Redrum624/divsel (public) |
 | Upstream path | `test-assets/golden-selection.json` |
 | Produced by | divsel's own generator, `python/tools/gen_golden.py` (brute-force oracle over every subset of size `<= k`) |
 | Source commit (file last changed) | `b9a7a9cfc05a421b264c5d8684776a3d102455da` — *"test(golden): complete the CONFORMANCE.md contract, add cases 21-22"*, 2026-08-25 |

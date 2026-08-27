@@ -131,7 +131,7 @@ export {
 
 /**
  * Below this strength a memory is deleted by {@link Limbic.decayPass}.
- * the origin engine `memory_decay.py:126` — `if current_strength < 0.05: DELETE`.
+ * The origin engine's `memory_decay.py:126` — `if current_strength < 0.05: DELETE`.
  */
 export const FADE_THRESHOLD = 0.05;
 
@@ -145,7 +145,7 @@ export interface LimbicOptions {
   complete?: CompleteFn;
   /** Default {@link DEFAULT_WEIGHTS}. */
   weights?: ScoreWeights;
-  /** Default 0.5 — the origin engine's `ORIGIN_MEMORY_LAMBDA`. divsel's own default is 1.0. */
+  /** Default 0.5, the origin engine's default. divsel's own default is 1.0. */
   lambda?: number;
   /** How many scored rows to diversify over. Default 50. */
   pool?: number;
@@ -162,7 +162,7 @@ export interface Limbic {
   extract(conversation: readonly ChatTurn[]): Promise<ExtractedMemory[]>;
   /** Score the pool and diversify it. May return fewer than `k` — see `retrieve`. */
   retrieve(query: string, k?: number, options?: RetrieveOptions): Promise<ScoredMemory[]>;
-  /** the origin engine's `apply_decay_to_memories`: recompute strength, delete what has faded. */
+  /** The origin engine's `apply_decay_to_memories`: recompute strength, delete what has faded. */
   decayPass(now?: Date): Promise<{ decayed: number; faded: number }>;
   /** The store in use, for direct access. */
   store: MemoryStore;

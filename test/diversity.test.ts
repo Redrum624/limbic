@@ -131,7 +131,7 @@ describe("gistSelect — the id-keyed wrapper", () => {
     expect(() => gistSelect(["a"], line, undefined, 2)).toThrow(DiversityError);
   });
 
-  it("defaults lam to 0.5 — the origin engine's ORIGIN_MEMORY_LAMBDA, not divsel's 1.0", () => {
+  it("defaults lam to 0.5 — the origin engine's default, not divsel's 1.0", () => {
     // Three points on a line at 0, 1, 10 with unit weights and k = 2.
     // At lam = 0.5 the pair {0, 2} scores 2 + 0.5*10 = 7 either way; what is
     // being pinned is that the default is applied at all rather than divsel's 1.

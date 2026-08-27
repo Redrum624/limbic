@@ -1,5 +1,5 @@
 /**
- * LLM-driven memory extraction, ported from the origin engine
+ * LLM-driven memory extraction, ported from the origin engine's
  * `server/memory/memory_extraction.py`.
  *
  * limbic supplies no LLM. The caller injects a {@link CompleteFn}; without one,
@@ -10,7 +10,7 @@
  * ## Deliberate divergences from the Python reference (verified 2026-08-27)
  *
  * 1. **The placeholder is substituted literally, not through a format
- *    language.** the origin engine calls `EXTRACTION_PROMPT.format(conversation=formatted)`
+ *    language.** The origin engine calls `EXTRACTION_PROMPT.format(conversation=formatted)`
  *    (`memory_extraction.py:172`) on a prompt whose JSON example contains
  *    literal braces. Measured against the origin engine's own source, that call raises
  *    `KeyError: '\n  "memories"'` — `str.format` reads the example object as a
@@ -18,12 +18,12 @@
  *    returns `[]`, so **the origin engine's LLM extraction path returns no memories today**.
  *    limbic replaces the one `{conversation}` token and leaves every other
  *    brace alone, so the same prompt text actually reaches the model.
- * 2. **`extractionType` is a plain string.** the origin engine's `ExtractionType(...)`
+ * 2. **`extractionType` is a plain string.** The origin engine's `ExtractionType(...)`
  *    constructor raises on an unknown value and the row is dropped
  *    (`:370`, `:386`). limbic keeps unknown types and maps them to
  *    `"general"` — validate against {@link KNOWN_EXTRACTION_TYPES}, do not
  *    reject. Nothing else in the core depends on the enum being closed.
- * 3. **Extraction never saves.** the origin engine's `extract_from_conversation` writes
+ * 3. **Extraction never saves.** The origin engine's `extract_from_conversation` writes
  *    through to storage as a side effect when `save_immediately` is set;
  *    limbic's `extract()` returns the list and `remember()` is the only writer.
  *    The save gate travels with the data as {@link passesSaveGate}.
@@ -38,7 +38,7 @@ export interface ChatTurn {
 }
 
 /**
- * the origin engine's `EXTRACTION_PROMPT` (`memory_extraction.py:59`), verbatim apart from
+ * The origin engine's `EXTRACTION_PROMPT` (`memory_extraction.py:59`), verbatim apart from
  * the placeholder, which is substituted literally here — see divergence 1.
  */
 export const EXTRACTION_PROMPT = `Analyze this conversation and extract important information worth remembering.
@@ -92,7 +92,7 @@ Respond ONLY with valid JSON in this format:
 If no extractable information is found, respond with: {"memories": []}
 `;
 
-/** the origin engine keeps only the last 10 turns (`_format_conversation`, `:348`). */
+/** The origin engine keeps only the last 10 turns (`_format_conversation`, `:348`). */
 export const CONVERSATION_WINDOW = 10;
 
 /** Below this many formatted characters the origin engine skips the call entirely (`:169`). */
@@ -102,14 +102,14 @@ export const MIN_CONVERSATION_CHARS = 50;
 export const EXTRACTION_MAX_TOKENS = 1024;
 export const EXTRACTION_TEMPERATURE = 0.3;
 
-/** the origin engine hands every LLM extraction the same confidence (`:379`). */
+/** The origin engine hands every LLM extraction the same confidence (`:379`). */
 export const LLM_EXTRACTION_CONFIDENCE = 0.8;
 
 /** The save gate: `importance >= 0.4 AND confidence >= 0.6` (`:403`). */
 export const MIN_IMPORTANCE = 0.4;
 export const MIN_CONFIDENCE = 0.6;
 
-/** the origin engine's `EXTRACTION_TO_CATEGORY` (`memory_extraction.py:32`). */
+/** The origin engine's `EXTRACTION_TO_CATEGORY` (`memory_extraction.py:32`). */
 export const EXTRACTION_TO_CATEGORY: Readonly<Record<string, MemoryCategory>> = {
   fact: "personal_fact",
   preference: "preference",
@@ -120,7 +120,7 @@ export const EXTRACTION_TO_CATEGORY: Readonly<Record<string, MemoryCategory>> = 
   interest: "interest",
 };
 
-/** the origin engine's closed `ExtractionType` enum, kept open here — see divergence 2. */
+/** The origin engine's closed `ExtractionType` enum, kept open here — see divergence 2. */
 export const KNOWN_EXTRACTION_TYPES: ReadonlySet<string> = new Set(
   Object.keys(EXTRACTION_TO_CATEGORY),
 );
@@ -131,7 +131,7 @@ export function categoryFor(extractionType: string): MemoryCategory {
 }
 
 /**
- * the origin engine's `_format_conversation` (`:345`): the last {@link CONVERSATION_WINDOW}
+ * The origin engine's `_format_conversation` (`:345`): the last {@link CONVERSATION_WINDOW}
  * turns, empty messages dropped, `ROLE: content` per line.
  */
 export function formatConversation(conversation: readonly ChatTurn[]): string {
@@ -154,7 +154,7 @@ export function buildExtractionPrompt(conversation: readonly ChatTurn[]): string
 }
 
 /**
- * the origin engine's `_parse_extraction_response` (`:356`): find the outermost
+ * The origin engine's `_parse_extraction_response` (`:356`): find the outermost
  * brace-delimited span, parse it, and read `memories[]`.
  *
  * **Never throws.** A malformed response, a missing object, a non-array
@@ -162,7 +162,7 @@ export function buildExtractionPrompt(conversation: readonly ChatTurn[]): string
  * an extraction failure must never cost the caller their turn.
  */
 export function parseExtractionResponse(response: string): ExtractedMemory[] {
-  // the origin engine's `re.search(r'\{[\s\S]*\}', response)` — greedy, so it spans from the
+  // The origin engine's `re.search(r'\{[\s\S]*\}', response)` — greedy, so it spans from the
   // first `{` to the last `}`, which is what strips a model's prose preamble
   // and any trailing ``` fence.
   const first = response.indexOf("{");
@@ -210,7 +210,7 @@ export function parseExtractionResponse(response: string): ExtractedMemory[] {
   return extracted;
 }
 
-/** the origin engine's save gate (`:403`): `importance >= 0.4` **and** `confidence >= 0.6`. */
+/** The origin engine's save gate (`:403`): `importance >= 0.4` **and** `confidence >= 0.6`. */
 export function passesSaveGate(extracted: ExtractedMemory): boolean {
   return extracted.importance >= MIN_IMPORTANCE && extracted.confidence >= MIN_CONFIDENCE;
 }

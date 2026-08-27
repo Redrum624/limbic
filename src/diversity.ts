@@ -9,8 +9,8 @@
  *   every quantity divsel's `docs/CONFORMANCE.md` compares, which is what
  *   `test/diversity.golden.test.ts` runs the 22 golden cases through.
  *
- * `lam` defaults to **0.5** here — the value the origin engine's plan gives
- * `ORIGIN_MEMORY_LAMBDA`. divsel's own default is `1.0`; the difference is
+ * `lam` defaults to **0.5** here, matching the origin engine's own default
+ * for this setting. divsel's own default is `1.0`; the difference is
  * deliberate and is called out in the README's parity section.
  */
 

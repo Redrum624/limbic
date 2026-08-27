@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   const limbic = createLimbic({
     embedder: new OllamaEmbedder({ host: HOST, model: "nomic-embed-text" }),
     complete,
-    // the origin engine's ORIGIN_MEMORY_LAMBDA. Raise it if retrieval keeps returning
+    // The origin engine's default. Raise it if retrieval keeps returning
     // paraphrases of one fact; the bench in `bench/redundancy.bench.ts` shows
     // where the crossover sits on a clustered corpus.
     lambda: 0.5,

@@ -1,8 +1,8 @@
 /**
  * Ollama embedder — the default, and the only network call limbic ever makes.
  *
- * Endpoint parity with the origin engine `server/services/ollama_client.py` `embeddings()`
- * (L238-261, verified at the origin engine commit `ff9c407c`):
+ * Endpoint parity with the origin engine's `server/services/ollama_client.py` `embeddings()`
+ * (L238-261, verified at origin-engine commit `ff9c407c`):
  *
  *   POST {host}/api/embed
  *   body {"model": ..., "input": ...}

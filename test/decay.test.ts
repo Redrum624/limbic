@@ -1,5 +1,5 @@
 /**
- * Decay parity — limbic vs the origin engine `server/memory/memory_decay.py`.
+ * Decay parity — limbic vs the origin engine's `server/memory/memory_decay.py`.
  *
  * The `CASES` table below was NOT hand-authored. It was produced by executing
  * the origin engine's own `MemoryDecayManager.calculate_decay` at commit `ff9c407c`

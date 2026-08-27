@@ -12,12 +12,12 @@
  * mapped to camelCase on the way out. Two deliberate differences:
  *
  *   - `id` is `TEXT PRIMARY KEY`, not `INTEGER PRIMARY KEY AUTOINCREMENT`:
- *     limbic memories carry caller-supplied string ids. Importing an the origin engine
+ *     limbic memories carry caller-supplied string ids. Importing an origin-engine
  *     database means coercing its integer ids to strings.
  *   - `keywords` holds a JSON array, where the origin engine holds `",".join(keywords)`.
  *     limbic owns this database and a keyword containing a comma must survive
  *     the round trip. The reader still accepts the legacy comma-joined form so
- *     an imported the origin engine table reads correctly.
+ *     an imported origin-engine table reads correctly.
  *
  * `tier`, `original_content` and `compacted_at` — the origin engine's memory-compaction
  * columns — are deliberately absent: limbic 0.1.0 does not model tiers, and a
@@ -148,7 +148,7 @@ function decodeKeywords(raw: string | null): string[] {
     const parsed: unknown = JSON.parse(trimmed);
     if (Array.isArray(parsed)) return parsed.map((k) => String(k));
   }
-  // Legacy: an the origin engine table stores `",".join(keywords)`.
+  // Legacy: an origin-engine table stores `",".join(keywords)`.
   return trimmed
     .split(",")
     .map((k) => k.trim())

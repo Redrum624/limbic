@@ -22,9 +22,9 @@ tag and a build.
 - `src/internal/vec.ts` — `cosine` (returns `null` for "cannot be compared",
   never `0`) and `l2normalize`.
 - `src/internal/scoring.ts` — the four-channel base score plus the cosine blend,
-  ported from the origin engine `server/memory/retrieval_service.py`. `scoreMemory` takes
+  ported from the origin engine's `server/memory/retrieval_service.py`. `scoreMemory` takes
   `now` explicitly and never reads the wall clock.
-- `src/decay.ts` — `calculateDecay`, ported from the origin engine
+- `src/decay.ts` — `calculateDecay`, ported from the origin engine's
   `server/memory/memory_decay.py`, including Python's round-half-to-even at
   3 dp.
 - `src/embedders/ollama.ts` — `OllamaEmbedder` (POST `/api/embed`).
@@ -58,7 +58,7 @@ tag and a build.
   one was measured to fail correct ports 69 times by up to 8.1×. `expected_f`
   is bounded as `tol(expected_g) + lam*tol(expected_div)` because `f` is
   derived; `expected_threshold` is a selected grid entry, not a measurement.
-- the origin engine `golden-scoring.json`: base score, final score and both ranking arrays
+- The origin engine's `golden-scoring.json`: base score, final score and both ranking arrays
   at the fixture's own absolute `1e-6`, clock pinned to its `now`.
 - Both fixtures are copied byte-for-byte and re-hashed on every test run
   (`test/fixtures.hash.test.ts`); provenance is in
@@ -66,10 +66,10 @@ tag and a build.
 
 ### Notes on the port
 
-- `lambda` defaults to **0.5** (the origin engine's `ORIGIN_MEMORY_LAMBDA`); divsel's own
+- `lambda` defaults to **0.5**, matching the origin engine's default; divsel's own
   default is `1.0`. The bench shows the crossover between them on a clustered
   corpus, so limbic's default is the conservative one.
-- the origin engine's `EXTRACTION_PROMPT.format(...)` raises `KeyError` on its own JSON
+- The origin engine's `EXTRACTION_PROMPT.format(...)` raises `KeyError` on its own JSON
   example and the exception is swallowed, so the origin engine's LLM extraction path returns
   `[]` today. limbic substitutes the placeholder literally instead.
 - Unknown extraction types are kept and mapped to `general` rather than

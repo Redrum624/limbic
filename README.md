@@ -38,7 +38,7 @@ Every TypeScript memory option today is either a **cloud service client** (Zep),
 | LlamaIndex.TS 0.12 | `createMemory()` is FIFO plus blocks; prioritisation is a bare integer | scoring, decay, emotion, diversity |
 | `node-llama-cpp` 3.20 | Local embeddings, and a good one — but it is an inference library, not a memory engine | limbic *consumes* it, as an optional peer |
 
-limbic is a TypeScript port of the production memory engine (`server/memory/`) from [the origin engine](the origin engine) (private), a shipped offline AI-companion server. The semantics are not reinvented here; they are ported and then **proved equivalent by cross-language golden fixtures**.
+limbic is a TypeScript port of the production memory engine (`server/memory/`) from a private Python engine by the same author — a shipped offline AI-companion server. The semantics are not reinvented here; they are ported and then **proved equivalent by cross-language golden fixtures**.
 
 ## Design commitments
 
@@ -181,7 +181,7 @@ The reader is not vacuous, and that is measured too. Four deliberate rule mutati
 | `lambda` doubled | 20 of 22 | 20 |
 | `div(\|S\| ≤ 1) = 0` instead of `d_max` (rule 4) | case 7 alone | case 7 |
 
-> **`lambda` defaults to `0.5` in limbic**, the value the origin engine's plan gives `ORIGIN_MEMORY_LAMBDA`. **divsel's own default is `1.0`.** The bench below shows the crossover sitting between them on a clustered corpus, so this default is the conservative one: it diversifies less, not more.
+> **`lambda` defaults to `0.5` in limbic**, matching the origin engine's own default. **divsel's own default is `1.0`.** The bench below shows the crossover sitting between them on a clustered corpus, so this default is the conservative one: it diversifies less, not more.
 
 ### Scoring — the origin engine's `golden-scoring.json`
 
@@ -189,18 +189,18 @@ Copied byte-for-byte (`sha256 fc1e9830…`), clock pinned to the fixture's `now 
 
 ### Deliberate deviations from the Python reference
 
-| limbic | the origin engine | Why |
+| limbic | The origin engine | Why |
 |---|---|---|
-| `id: string` | `Optional[int]` autoincrement | limbic must support non-SQL stores and caller-supplied ids. Coerce to string when importing an the origin engine DB. |
+| `id: string` | `Optional[int]` autoincrement | limbic must support non-SQL stores and caller-supplied ids. Coerce to string when importing an origin-engine DB. |
 | `extractionType: string` | closed `ExtractionType` enum | Keeps the core open to user-defined types. Unknown types map to `general` and are **not** rejected; the origin engine drops the row. |
-| Prompt placeholder substituted literally | `EXTRACTION_PROMPT.format(...)` | the origin engine's call raises `KeyError: '\n  "memories"'` on its own JSON example — `str.format` reads it as a replacement field — and the broad `except Exception` swallows it, so **the origin engine's LLM extraction path returns `[]` today**. limbic replaces the one `{conversation}` token and leaves the example intact. |
+| Prompt placeholder substituted literally | `EXTRACTION_PROMPT.format(...)` | The origin engine's call raises `KeyError: '\n  "memories"'` on its own JSON example — `str.format` reads it as a replacement field — and the broad `except Exception` swallows it, so **the origin engine's LLM extraction path returns `[]` today**. limbic replaces the one `{conversation}` token and leaves the example intact. |
 | `extract()` never writes | writes through when `save_immediately` | `remember()` is the only writer. The save gate travels with the data as `passesSaveGate`. |
-| `Memory.emotion?: { label, intensity }` | read from the source conversation | the origin engine scores the *conversation's* detected emotion, which limbic does not store; the caller supplies the pair. `Memory.feeling` is the extractor's free-text tone and is **not** what is scored. |
+| `Memory.emotion?: { label, intensity }` | read from the source conversation | The origin engine scores the *conversation's* detected emotion, which limbic does not store; the caller supplies the pair. `Memory.feeling` is the extractor's free-text tone and is **not** what is scored. |
 | `scoreMemory(m, q, now)` | reads `datetime.now()` | An explicit clock is what makes the fixture evaluable. |
 
 ## Bench
 
-`npm run bench` — 60 memories, 12 planted topics × 5 near-paraphrases each, dim 48, fixed seed, `k = 8`, clusters counted as connected components at `cosine > 0.92`. Metric definitions are the origin engine plan Task 8's.
+`npm run bench` — 60 memories, 12 planted topics × 5 near-paraphrases each, dim 48, fixed seed, `k = 8`, clusters counted as connected components at `cosine > 0.92`. Metric definitions are the origin engine's plan Task 8 definitions.
 
 | strategy | redundancy ↓ | clusters hit | coverage ↑ | facts / 1k prompt chars ↑ |
 |---|---|---|---|---|
@@ -216,15 +216,15 @@ Above the crossover the same eight slots and the same 648 prompt characters carr
 
 **Read the top three rows as the honest half.** At `λ ≤ 0.5` GIST returns exactly top-`k` here, and that is *correct*: it maximises `g(S) + λ·div(S)`, and below the crossover the score given up to reach another cluster outweighs the diversity gained. Whether the default `0.5` is right for your corpus depends on how steep your score gradient is across topics. Sweep it.
 
-**Caveats, stated rather than buried.** The corpus is **synthetic and n = 1**, built from a fixed seed with a cluster structure chosen to make redundancy visible. the origin engine's `server/tools/memory_bench.py` exists and could supply a real corpus, but as of 2026-08-27 the collapse-onset figures in the origin engine's `docs/benchmarks/memory-diversity.md` are **retracted** — the detector that produced them could not fire — and a re-cut is in progress. The definitions are shared with it; no figure from it is quoted here.
+**Caveats, stated rather than buried.** The corpus is **synthetic and n = 1**, built from a fixed seed with a cluster structure chosen to make redundancy visible. The origin engine's `server/tools/memory_bench.py` exists and could supply a real corpus, but as of 2026-08-27 the collapse-onset figures in the origin engine's `docs/benchmarks/memory-diversity.md` are **retracted** — the detector that produced them could not fire — and a re-cut is in progress. The definitions are shared with it; no figure from it is quoted here.
 
 ## Upstream
 
 | Upstream | State | What limbic takes |
 |---|---|---|
 | **divsel** 0.1.0 — Rust GIST reference + Python bindings ([GitHub](https://github.com/Redrum624/divsel), public) | Finished; not yet tagged or published to crates.io / PyPI — which gates nothing here, since the fixture is consumed from a checkout | `test-assets/golden-selection.json` and `docs/CONFORMANCE.md` — the contract `gistSelect` reproduces |
-| **the origin engine** (`the origin engine`, private) | Memory-engine plan 9 of 12 done; the spec, both fixtures, `diversity.py`, `vectorops.py` and `memory_bench.py` all exist and are tracked | `test-assets/memory/golden-scoring.json`, plus `server/memory/` as the reference for scoring, decay and extraction |
-| **aura-life** 0.1.0 | Finished — but it is the origin engine's *life-simulation* engine, extracted from `server/engine/` and `server/personas/` | Nothing. It is orthogonal to this port. |
+| **The origin engine** (private) | Memory-engine plan 9 of 12 done; the spec, both fixtures, `diversity.py`, `vectorops.py` and `memory_bench.py` all exist and are tracked | `test-assets/memory/golden-scoring.json`, plus `server/memory/` as the reference for scoring, decay and extraction |
+| **A sibling library** 0.1.0 | Finished — but it is the origin engine's *life-simulation* half, extracted from `server/engine/` and `server/personas/` | Nothing. It is orthogonal to this port. |
 
 ## Name
 

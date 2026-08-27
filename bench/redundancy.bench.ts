@@ -2,7 +2,7 @@
  * Naive top-k against GIST diversification, on a corpus with known cluster
  * structure.
  *
- * The metric definitions are the origin engine plan Task 8's, so the two are comparable in
+ * The metric definitions are the origin engine's plan Task 8 definitions, so the two are comparable in
  * principle:
  *
  * * **redundancy** — the mean, over the selected rows, of each row's *maximum*
@@ -18,7 +18,7 @@
  * ⚠️ **The corpus is synthetic, and n = 1.** It is built from a fixed seed with
  * a cluster structure chosen to make redundancy visible, which is exactly the
  * shape retrieval-collapse takes but is not evidence about any real corpus.
- * the origin engine's `server/tools/memory_bench.py` exists and could supply a real one, but
+ * The origin engine's `server/tools/memory_bench.py` exists and could supply a real one, but
  * as of 2026-08-27 the collapse-onset numbers in the origin engine's
  * `docs/benchmarks/memory-diversity.md` are **retracted** — the detector that
  * produced them could not fire — and a re-cut is in progress. The definitions
@@ -41,7 +41,7 @@ const K = 8;
 const LAMBDA = 0.5;
 /** How much score a caller gives up per step to another cluster. */
 const CLUSTER_SCORE_STEP = 0.03;
-/** the origin engine plan Task 8's clustering threshold. */
+/** The origin engine's plan Task 8 clustering threshold. */
 const CLUSTER_EDGE = 0.92;
 
 /** mulberry32 — small, seeded, and identical on every platform. */

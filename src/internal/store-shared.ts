@@ -13,7 +13,7 @@
  *     in whatever order the engine returns them, which is not a contract two
  *     different stores can both satisfy.
  *   - search: substring over `content` and over each keyword, case-insensitive
- *     the way SQLite's `lower()` is case-insensitive, i.e. ASCII-only. the origin engine
+ *     the way SQLite's `lower()` is case-insensitive, i.e. ASCII-only. The origin engine
  *     searches with `content LIKE '%q%' OR keywords LIKE '%q%'`
  *     (`memory_service.py:484`-ish region); limbic matches per keyword instead
  *     of against the serialized column so the result cannot depend on how the
@@ -24,7 +24,7 @@
 
 import type { Memory } from "../types.js";
 
-/** Default page size of a pool read. the origin engine's retrieval pool reads the same shape. */
+/** Default page size of a pool read. The origin engine's retrieval pool reads the same shape. */
 export const DEFAULT_ALL_LIMIT = 200;
 
 /**

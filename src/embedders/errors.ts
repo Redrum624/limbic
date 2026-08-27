@@ -1,7 +1,7 @@
 /**
  * The one error type every `Embedder` throws.
  *
- * the origin engine's rule, which limbic keeps: an embedding failure is never fatal to a
+ * The origin engine's rule, which limbic keeps: an embedding failure is never fatal to a
  * turn. The retrieval pipeline catches this and degrades to keyword-only
  * scoring — the cosine channel simply goes MISSING, which is exactly the case
  * `scoreMemory` already handles. So callers need one type to catch, and it must

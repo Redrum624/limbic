@@ -5,3 +5,7 @@ dist-types/
 .DS_Store
 coverage/
 *.tgz
+
+# Internal working documents — the inference surface (private engine layout,
+# roadmap status, flag defaults, commit SHAs) survives a name scrub.
+docs/superpowers/

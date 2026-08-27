@@ -1,12 +1,12 @@
 /**
- * Vector operations — a port of the origin engine `server/memory/vectorops.py`.
+ * Vector operations — a port of the origin engine's `server/memory/vectorops.py`.
  *
  * The one semantic that matters for parity: `cosine` returns `null`, not `0`,
  * for every case where a similarity does not exist (either side missing or
  * empty, mismatched dimensions, a zero or non-finite norm, non-finite
  * components). `null` means "these two cannot be compared" and falls back to
  * the unblended base score; a returned `0` would be a real similarity of zero
- * and would cost the memory 30% of its score. the origin engine's docstring calls this out
+ * and would cost the memory 30% of its score. The origin engine's docstring calls this out
  * explicitly and `golden-scoring.json` pins it:
  *
  *     "cosine_is_none": "base - 'cannot be compared' is the MISSING case,

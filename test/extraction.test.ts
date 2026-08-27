@@ -66,7 +66,7 @@ describe("buildExtractionPrompt", () => {
     expect(prompt).not.toBeNull();
     expect(prompt).toContain("USER: My name is Ada");
     expect(prompt).not.toContain("{conversation}");
-    // The example object survives. the origin engine's `str.format` call cannot get this far:
+    // The example object survives. The origin engine's `str.format` call cannot get this far:
     // it reads `{\n  "memories": ...}` as a replacement field and raises
     // KeyError, which its own `except Exception` then swallows.
     expect(prompt).toContain('"memories": [');
@@ -128,7 +128,7 @@ describe("parseExtractionResponse", () => {
   });
 
   it("keeps an unknown extraction type instead of dropping the row", () => {
-    // the origin engine's `ExtractionType(...)` raises here and the row is skipped; limbic
+    // The origin engine's `ExtractionType(...)` raises here and the row is skipped; limbic
     // validates against the known set rather than rejecting.
     const rows = parseExtractionResponse('{"memories": [{"type": "VIBE", "content": "x"}]}');
     expect(rows).toHaveLength(1);

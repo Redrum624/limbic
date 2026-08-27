@@ -1,5 +1,5 @@
 /**
- * Memory decay — a port of the origin engine `server/memory/memory_decay.py`.
+ * Memory decay — a port of the origin engine's `server/memory/memory_decay.py`.
  *
  * Verified against the origin engine at commit `ff9c407c` (2026-08-27):
  *   `CATEGORY_HALF_LIFE_DAYS`  memory_decay.py:23-32
@@ -22,7 +22,7 @@
  * dropping the argument silently would be a behaviour change waiting to happen.
  */
 
-/** the origin engine `CATEGORY_HALF_LIFE_DAYS` (memory_decay.py:23). Unknown category => 60. */
+/** The origin engine's `CATEGORY_HALF_LIFE_DAYS` (memory_decay.py:23). Unknown category => 60. */
 export const CATEGORY_HALF_LIFE_DAYS: Readonly<Record<string, number>> = {
   personal_fact: 180, // Personal facts remembered longer
   preference: 90, // Preferences fade over time
@@ -34,13 +34,13 @@ export const CATEGORY_HALF_LIFE_DAYS: Readonly<Record<string, number>> = {
   health: 60, // Health info moderately persistent
 };
 
-/** Half-life for a category not in the table. the origin engine: `.get(category, 60)`. */
+/** Half-life for a category not in the table. The origin engine: `.get(category, 60)`. */
 export const DEFAULT_HALF_LIFE_DAYS = 60;
 
 /**
- * the origin engine `IMPORTANCE_DECAY_FACTOR` (memory_decay.py:35), as ordered pairs.
+ * The origin engine's `IMPORTANCE_DECAY_FACTOR` (memory_decay.py:35), as ordered pairs.
  *
- * the origin engine scans `sorted(..., reverse=True)` and takes the FIRST threshold that is
+ * The origin engine scans `sorted(..., reverse=True)` and takes the FIRST threshold that is
  * `<= importance`, so this list is already in descending threshold order and is
  * scanned the same way. Importance below 0.2 matches nothing and the factor
  * stays at its initial `1.0`.
@@ -53,7 +53,7 @@ export const IMPORTANCE_DECAY_FACTOR: ReadonlyArray<readonly [number, number]> =
   [0.2, 1.3], // Unimportant: faster decay
 ];
 
-/** the origin engine: each access adds 5 days to the half-life. */
+/** The origin engine: each access adds 5 days to the half-life. */
 export const ACCESS_REINFORCEMENT_DAYS = 5;
 
 /** Floors — "very important memories never fully fade" (memory_decay.py:85). */

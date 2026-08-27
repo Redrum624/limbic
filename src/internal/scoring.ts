@@ -1,5 +1,5 @@
 /**
- * Scoring — a port of the origin engine `server/memory/retrieval_service.py`.
+ * Scoring — a port of the origin engine's `server/memory/retrieval_service.py`.
  *
  * Verified against the origin engine at commit `ff9c407c` (2026-08-27):
  *   `_calculate_score`           retrieval_service.py:553
@@ -32,15 +32,15 @@ import {
 } from "../types.js";
 import { cosine } from "./vec.js";
 
-/** the origin engine `RECENCY_HALF_LIFE_DAYS = 7` (retrieval_service.py:121). */
+/** The origin engine's `RECENCY_HALF_LIFE_DAYS = 7` (retrieval_service.py:121). */
 export const RECENCY_HALF_LIFE_DAYS = 7;
 
-/** the origin engine `EMOTION_HIGH_THRESHOLD` (retrieval_service.py:124). */
+/** The origin engine's `EMOTION_HIGH_THRESHOLD` (retrieval_service.py:124). */
 export const EMOTION_HIGH_THRESHOLD = 0.7;
-/** the origin engine `EMOTION_MEDIUM_THRESHOLD` (retrieval_service.py:125). */
+/** The origin engine's `EMOTION_MEDIUM_THRESHOLD` (retrieval_service.py:125). */
 export const EMOTION_MEDIUM_THRESHOLD = 0.4;
 
-/** the origin engine `BASE_WEIGHT` — the complement of `EMBED_BLEND`. */
+/** The origin engine's `BASE_WEIGHT` — the complement of `EMBED_BLEND`. */
 export const BASE_BLEND = 1 - EMBED_BLEND;
 
 export interface ScoreQuery {
@@ -62,7 +62,7 @@ export interface ScoreBreakdown {
 }
 
 /**
- * the origin engine `_extract_keywords` stop-word set, verbatim (retrieval_service.py:932).
+ * The origin engine's `_extract_keywords` stop-word set, verbatim (retrieval_service.py:932).
  */
 const STOP_WORDS: ReadonlySet<string> = new Set([
   "a", "an", "the", "is", "are", "was", "were", "be", "been",
@@ -84,7 +84,7 @@ const STOP_WORDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * the origin engine `_extract_keywords`: findall of ASCII letter runs over `text.lower()`,
+ * The origin engine's `_extract_keywords`: findall of ASCII letter runs over `text.lower()`,
  * then drop stop words and words of length <= 2.
  */
 export function extractKeywords(text: string): Set<string> {
@@ -98,8 +98,8 @@ export function extractKeywords(text: string): Set<string> {
 }
 
 /**
- * the origin engine `_emotions_related` — the hard-coded seven-family feelings-wheel table
- * (retrieval_service.py:678). No aura-life dependency.
+ * The origin engine's `_emotions_related` — the hard-coded seven-family feelings-wheel table
+ * (retrieval_service.py:678). No dependency on any sibling library.
  */
 const EMOTION_FAMILIES: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ["happy", new Set(["joyful", "content", "proud", "playful", "excited", "optimistic", "peaceful"])],
@@ -122,13 +122,13 @@ export function emotionsRelated(a: string, b: string): boolean {
   return false;
 }
 
-/** the origin engine `_calculate_recency_score`: 0.5 to the power (daysSinceAccess / 7). */
+/** The origin engine's `_calculate_recency_score`: 0.5 to the power (daysSinceAccess / 7). */
 export function recencyScore(daysSinceAccess: number): number {
   return Math.pow(0.5, daysSinceAccess / RECENCY_HALF_LIFE_DAYS);
 }
 
 /**
- * the origin engine `_calculate_relevance_score`: Jaccard between the query keyword set and
+ * The origin engine's `_calculate_relevance_score`: Jaccard between the query keyword set and
  * `memory.keywords | extractKeywords(memory.content)`, both lower-cased. `0`
  * when either side is empty.
  */
@@ -149,7 +149,7 @@ export function relevanceScore(memory: Memory, queryKeywords: Iterable<string>):
 }
 
 /**
- * the origin engine `_calculate_emotion_score`.
+ * The origin engine's `_calculate_emotion_score`.
  *
  * Deviation, deliberate and documented: the origin engine reaches for the source
  * conversation's emotion via `_get_emotion_for_message(source_message_id)`.
