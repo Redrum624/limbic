@@ -4,6 +4,14 @@
   "description": "Local-first, emotion-aware, LLM-agnostic memory engine for TypeScript — scoring, decay and GIST diversity retrieval with zero required dependencies.",
   "license": "Apache-2.0",
   "author": "Redrum624",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Redrum624/limbic.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Redrum624/limbic/issues"
+  },
+  "homepage": "https://github.com/Redrum624/limbic#readme",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -31,6 +39,8 @@
   },
   "scripts": {
     "build": "tsup",
+    "prepare": "tsup",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "bench": "vitest bench --run"
