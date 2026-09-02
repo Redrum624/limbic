@@ -1,12 +1,17 @@
 /**
  * Fixture drift gate.
  *
- * Golden fixtures are copied verbatim from upstream and are the conformance
- * contract. Re-hash them on every run so an edit, a partial re-copy or a
- * CRLF conversion fails here — loudly, with the two hashes side by side —
- * instead of silently redefining what "parity" means.
+ * Golden fixtures are the conformance contract. Re-hash them on every run so
+ * an edit, a partial re-copy or a CRLF conversion fails here — loudly, with
+ * the two hashes side by side — instead of silently redefining what "parity"
+ * means.
  *
- * Provenance for each entry lives in `test/fixtures/PROVENANCE.md`.
+ * `golden-selection.json` is byte-verbatim from upstream. `golden-scoring.json`
+ * is upstream's bytes with exactly two metadata strings (`generator`,
+ * `description`) neutralised for publication on 2026-08-29 — no number, key or
+ * byte of formatting changed — so its hash pins the published bytes, not the
+ * upstream ones. Provenance for each entry lives in
+ * `test/fixtures/PROVENANCE.md`.
  */
 
 import { createHash } from "node:crypto";
@@ -25,6 +30,10 @@ interface FixtureProvenance {
   /** Upstream HEAD at the moment the bytes were copied. */
   upstreamHeadAtCopy: string;
   bytes: number;
+  /**
+   * sha256 of the committed bytes — upstream's bytes for a verbatim copy, the
+   * published bytes where PROVENANCE.md records a neutralisation.
+   */
   upstreamSha256: string;
 }
 
@@ -33,11 +42,16 @@ export const FIXTURES: readonly FixtureProvenance[] = [
     file: "golden-scoring.json",
     upstream: "a private Python engine by the same author",
     upstreamPath: "test-assets/memory/golden-scoring.json",
-    sourceCommit: "4a307a3b3553eb0b3d112f9c24649628a9c6ed04",
-    upstreamHeadAtCopy: "ff9c407cd292848155a6c2982ccc4d185c518b5b",
-    bytes: 5582,
+    // The origin engine is unpublished, so its commit ids identify nothing a
+    // reader can reach; only the dates are recorded.
+    sourceCommit: "(private, unpublished; file last changed 2026-08-26)",
+    upstreamHeadAtCopy: "(private, unpublished; copied 2026-08-27)",
+    // Two metadata strings (`generator`, `description`) neutralised for
+    // publication on 2026-08-29; every number, key and byte of formatting is
+    // upstream's. The hash pins the published bytes.
+    bytes: 5599,
     upstreamSha256:
-      "fc1e983031ddb1cace78af238cdc1defe1f491020c83e671e49e0ad6453caabd",
+      "89755bf6a74bd7408fbe0a8313d0bb370a18130f35bbfc567d632d90fb5cf349",
   },
   {
     file: "golden-selection.json",
@@ -66,8 +80,8 @@ describe("golden fixture provenance", () => {
         const actual = createHash("sha256").update(bytes).digest("hex");
         expect(
           actual,
-          `${fixture.file} drifted from ${fixture.upstream}:${fixture.upstreamPath} ` +
-            `at ${fixture.sourceCommit}. Re-copy it verbatim; do not edit it here.`,
+          `${fixture.file} drifted from ${fixture.upstream}:${fixture.upstreamPath}. ` +
+            `Restore the pinned bytes (see test/fixtures/PROVENANCE.md); do not edit it here.`,
         ).toBe(fixture.upstreamSha256);
       });
 

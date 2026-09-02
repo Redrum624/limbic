@@ -1,7 +1,7 @@
 {
- "generator": "the origin engine's memory module (Task 5 scoring code)",
+ "generator": "the origin engine's scoring code (Task 5)",
  "schema": 1,
- "description": "The origin engine's OWN contract: the four-channel base score and the cosine blend on top of it. Unlike golden-selection.json there is no upstream reference implementation for this blend - these numbers are defined by server/memory/retrieval_service.py and nothing else.",
+ "description": "The origin engine's own contract: the four-channel base score and the cosine blend on top of it. Unlike golden-selection.json there is no upstream reference implementation for this blend - these numbers are defined by the origin engine's retrieval scoring and nothing else.",
  "tolerance": {
   "score_abs": 1e-06,
   "rule": "abs(actual - expected) <= score_abs",

@@ -1,10 +1,12 @@
 # Fixture provenance
 
-Golden fixtures are copied in **verbatim** from their upstream repository. They
-are never regenerated here and never hand-edited. Every entry below is pinned by
-`sha256`, and `test/fixtures.hash.test.ts` re-hashes each file on every run so a
-silent edit or a line-ending conversion fails the suite instead of quietly
-changing what "parity" means.
+Golden fixtures are copied in from their upstream repository, never regenerated
+here, and their **values** are never edited. `golden-selection.json` is
+byte-verbatim; `golden-scoring.json` carries one documented exception — two
+metadata strings neutralised for publication (see its section). Every entry
+below is pinned by `sha256`, and `test/fixtures.hash.test.ts` re-hashes each
+file on every run so a silent edit or a line-ending conversion fails the suite
+instead of quietly changing what "parity" means.
 
 ## `golden-scoring.json`
 
@@ -12,13 +14,21 @@ changing what "parity" means.
 |---|---|
 | Upstream | A private Python engine by the same author ("the origin engine") |
 | Upstream path | `test-assets/memory/golden-scoring.json` |
-| Produced by | The origin engine's memory plan, Task 9 (`server/memory/retrieval_service.py` is the only definition of these numbers) |
-| Source commit (file last changed) | `4a307a3b3553eb0b3d112f9c24649628a9c6ed04` — *"docs(memory): the SPEC and the two golden fixtures a port conforms to"*, 2026-08-26 |
-| Upstream `HEAD` when copied | `ff9c407cd292848155a6c2982ccc4d185c518b5b` (2026-08-27) |
+| Produced by | The origin engine's scoring code — its `retrieval_service.py` is the only definition of these numbers |
+| Source commit (file last changed) | (private, unpublished), 2026-08-26 |
+| Upstream `HEAD` when copied | (private, unpublished) (2026-08-27) |
 | Copied on | 2026-08-27 |
-| Size | 5582 bytes |
+| Size | 5599 bytes |
 | Line endings | LF (243), CR (0) — held by `.gitattributes` (`test/fixtures/*.json -text`) |
-| `upstream_sha256` | `fc1e983031ddb1cace78af238cdc1defe1f491020c83e671e49e0ad6453caabd` |
+| `sha256` (published bytes) | `89755bf6a74bd7408fbe0a8313d0bb370a18130f35bbfc567d632d90fb5cf349` |
+
+**Not byte-verbatim — one documented exception.** On 2026-08-29, in preparation
+for publication, exactly two metadata strings were neutralised in the committed
+copy: `generator` (now `"the origin engine's scoring code (Task 5)"`) and
+`description` (the same sentence with the engine named only as "the origin
+engine"). Nothing else changed — not a byte of the numbers, keys, or formatting.
+The `sha256` above therefore pins the **published** bytes, not the upstream
+ones; the numeric content is upstream's, untouched.
 
 **Shape.** A *single scenario*, not a `cases[]` array. Top-level keys:
 `generator, schema, description, tolerance, now, clock, query, query_keywords,
@@ -64,11 +74,11 @@ measurement disproved, and the field the fix missed"*, 2026-08-26),
 > implements the superseded blanket tolerance.
 
 **divsel rewrote its history on 2026-08-26** (`d022aef`), so the abbreviations
-the limbic plan cites are pre-rewrite names of objects that are still reachable
-but no longer on `main`: fixture `d0f8ac8` → `b9a7a9c`, conformance `9262375` →
-`02c546f`, and `main` is now `d022aef`, not the `9455df0` the plan records. The
-fixture **bytes** are identical at every one of them, which is what the `sha256`
-above pins.
+cited in this file and in `test/diversity.golden.test.ts` are pre-rewrite names
+of objects that are still reachable but no longer on `main`: fixture `d0f8ac8`
+→ `b9a7a9c`, conformance `9262375` → `02c546f`, and `main` is now `d022aef`.
+The fixture **bytes** are identical at every one of them, which is what the
+`sha256` above pins.
 
 **Shape.** `generator: "divsel 0.1.0"`, `schema: 1`, `tolerance: {f_rel: 1e-6,
 selected: "exact"}`, and `cases[]` with 22 entries. There is **no `ids` field**:
