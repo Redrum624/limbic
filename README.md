@@ -1,5 +1,7 @@
 # limbic
 
+[![Downloads](.github/badges/downloads-badge.svg)](https://github.com/Redrum624/limbic/releases)
+[![Latest release](.github/badges/latest-badge.svg)](https://github.com/Redrum624/limbic/releases/latest)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)
@@ -488,6 +490,12 @@ and never hand-edited — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 The limbic system is the brain circuitry where emotion and memory meet. That is
 exactly the scope of this library.
+
+## Downloads
+
+![Downloads over time](.github/badges/downloads.svg)
+
+<sub>The curve builds from publish day — the GitHub API keeps no earlier download history.</sub>
 
 ## License
 
