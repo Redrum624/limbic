@@ -29,10 +29,13 @@ interface TensorLike {
   dims: number[];
 }
 
-type ExtractorLike = (
+type ExtractorLike = ((
   texts: string[],
   options?: Record<string, unknown>,
-) => Promise<TensorLike>;
+) => Promise<TensorLike>) & {
+  /** Releases the pipeline's ONNX Runtime session in `@huggingface/transformers` v3. */
+  dispose?: () => Promise<void> | void;
+};
 
 interface TransformersModule {
   pipeline: (
@@ -136,6 +139,17 @@ export class TransformersEmbedder implements Embedder {
     }
 
     return splitPooledTensor(tensor, texts.length);
+  }
+
+  /**
+   * Release the ONNX session (native memory, model weights) behind the
+   * pipeline, mirroring `NodeLlamaCppEmbedder.dispose`. Safe to call twice;
+   * a later embed() rebuilds the pipeline.
+   */
+  async dispose(): Promise<void> {
+    const extractor = this.#extractor;
+    this.#extractor = undefined;
+    await extractor?.dispose?.();
   }
 }
 

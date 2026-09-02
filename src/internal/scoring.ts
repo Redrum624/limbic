@@ -1,14 +1,10 @@
 /**
- * Scoring — a port of the origin engine's `server/memory/retrieval_service.py`.
+ * Scoring — a port of the origin engine's `retrieval_service.py`.
  *
- * Verified against the origin engine at commit `ff9c407c` (2026-08-27):
- *   `_calculate_score`           retrieval_service.py:553
- *   `_calculate_emotion_score`   retrieval_service.py:610
- *   `_emotions_related`          retrieval_service.py:672
- *   `_calculate_recency_score`   retrieval_service.py:884
- *   `_calculate_relevance_score` retrieval_service.py:898
- *   `_extract_keywords`          retrieval_service.py:926
- *   weights / thresholds         retrieval_service.py:110-125
+ * Verified against the origin engine (2026-08-27): `_calculate_score`,
+ * `_calculate_emotion_score`, `_emotions_related`, `_calculate_recency_score`,
+ * `_calculate_relevance_score`, `_extract_keywords` and the weights /
+ * thresholds, all in `retrieval_service.py`.
  *
  * The pinned formula, also stated in `test/fixtures/golden-scoring.json`:
  *
@@ -32,12 +28,12 @@ import {
 } from "../types.js";
 import { cosine } from "./vec.js";
 
-/** The origin engine's `RECENCY_HALF_LIFE_DAYS = 7` (retrieval_service.py:121). */
+/** The origin engine's `RECENCY_HALF_LIFE_DAYS = 7` (retrieval_service.py). */
 export const RECENCY_HALF_LIFE_DAYS = 7;
 
-/** The origin engine's `EMOTION_HIGH_THRESHOLD` (retrieval_service.py:124). */
+/** The origin engine's `EMOTION_HIGH_THRESHOLD` (retrieval_service.py). */
 export const EMOTION_HIGH_THRESHOLD = 0.7;
-/** The origin engine's `EMOTION_MEDIUM_THRESHOLD` (retrieval_service.py:125). */
+/** The origin engine's `EMOTION_MEDIUM_THRESHOLD` (retrieval_service.py). */
 export const EMOTION_MEDIUM_THRESHOLD = 0.4;
 
 /** The origin engine's `BASE_WEIGHT` — the complement of `EMBED_BLEND`. */
@@ -62,7 +58,7 @@ export interface ScoreBreakdown {
 }
 
 /**
- * The origin engine's `_extract_keywords` stop-word set, verbatim (retrieval_service.py:932).
+ * The origin engine's `_extract_keywords` stop-word set, verbatim (retrieval_service.py).
  */
 const STOP_WORDS: ReadonlySet<string> = new Set([
   "a", "an", "the", "is", "are", "was", "were", "be", "been",
@@ -99,7 +95,7 @@ export function extractKeywords(text: string): Set<string> {
 
 /**
  * The origin engine's `_emotions_related` — the hard-coded seven-family feelings-wheel table
- * (retrieval_service.py:678). No dependency on any sibling library.
+ * (retrieval_service.py). No dependency on any sibling library.
  */
 const EMOTION_FAMILIES: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ["happy", new Set(["joyful", "content", "proud", "playful", "excited", "optimistic", "peaceful"])],
@@ -171,8 +167,8 @@ export function emotionScore(memory: Memory, targetEmotion?: string): number {
   if (memory.category === "emotion") score += 0.3;
 
   // Read through an explicit shape so this keeps compiling if `Memory` is
-  // regenerated from the plan's verbatim Task 1 block, which predates the
-  // `emotion` field Task 3 adds. See types.ts / MemoryEmotion.
+  // regenerated from the origin engine's model, which predates the optional
+  // `emotion` field limbic adds. See types.ts / MemoryEmotion.
   const data: MemoryEmotion | undefined = memory.emotion;
   if (data) {
     const { label, intensity } = data;
@@ -200,7 +196,7 @@ export function daysSince(iso: string, now: Date): number {
 
 /**
  * The four channels, the base score and the blended final in one object.
- * `scoreMemory` is the plan's public one-number signature over this.
+ * `scoreMemory` is the public one-number signature over this.
  */
 export function scoreMemoryDetailed(
   memory: Memory,
@@ -236,7 +232,7 @@ export function scoreMemoryDetailed(
 }
 
 /**
- * `scoreMemory(m, q, now)` — the plan's pinned signature. Returns the final
+ * `scoreMemory(m, q, now)` — the pinned public signature. Returns the final
  * score in [0, 1]: the base when there is no comparable vector, the blend when
  * there is.
  */

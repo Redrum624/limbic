@@ -11,7 +11,7 @@
  *   ollama pull nomic-embed-text
  *   ollama pull llama3.2
  *
- * Run:
+ * Run (`tsx` is fetched by npx; it is not a devDependency):
  *   npx tsx examples/ollama-companion.ts
  */
 
@@ -26,6 +26,11 @@ import {
 
 const HOST = process.env["OLLAMA_HOST"] ?? "http://127.0.0.1:11434";
 const CHAT_MODEL = process.env["OLLAMA_CHAT_MODEL"] ?? "llama3.2";
+const EMBED_MODEL = process.env["OLLAMA_EMBED_MODEL"] ?? "nomic-embed-text";
+// Bound the chat call the way OllamaEmbedder bounds its own requests: a stalled
+// server must fail the turn, not hang it forever. Twice the embedder's 30 s
+// default, because generation streams tokens where embedding returns at once.
+const COMPLETE_TIMEOUT_MS = 60_000;
 
 /**
  * The one thing limbic never bundles: a provider. `complete` is any function
@@ -36,6 +41,7 @@ const complete: CompleteFn = async (prompt, opts) => {
   const response = await fetch(`${HOST}/api/generate`, {
     method: "POST",
     headers: { "content-type": "application/json" },
+    signal: AbortSignal.timeout(COMPLETE_TIMEOUT_MS),
     body: JSON.stringify({
       model: CHAT_MODEL,
       prompt,
@@ -53,7 +59,7 @@ const complete: CompleteFn = async (prompt, opts) => {
 
 async function main(): Promise<void> {
   const limbic = createLimbic({
-    embedder: new OllamaEmbedder({ host: HOST, model: "nomic-embed-text" }),
+    embedder: new OllamaEmbedder({ host: HOST, model: EMBED_MODEL }),
     complete,
     // The origin engine's default. Raise it if retrieval keeps returning
     // paraphrases of one fact; the bench in `bench/redundancy.bench.ts` shows

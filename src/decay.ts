@@ -1,10 +1,8 @@
 /**
- * Memory decay — a port of the origin engine's `server/memory/memory_decay.py`.
+ * Memory decay — a port of the origin engine's `memory_decay.py`.
  *
- * Verified against the origin engine at commit `ff9c407c` (2026-08-27):
- *   `CATEGORY_HALF_LIFE_DAYS`  memory_decay.py:23-32
- *   `IMPORTANCE_DECAY_FACTOR`  memory_decay.py:35-41
- *   `calculate_decay`          memory_decay.py:46-90
+ * Verified against the origin engine (2026-08-27): `CATEGORY_HALF_LIFE_DAYS`,
+ * `IMPORTANCE_DECAY_FACTOR` and `calculate_decay`, all in `memory_decay.py`.
  *
  * The formula, verbatim from the Python:
  *
@@ -22,7 +20,7 @@
  * dropping the argument silently would be a behaviour change waiting to happen.
  */
 
-/** The origin engine's `CATEGORY_HALF_LIFE_DAYS` (memory_decay.py:23). Unknown category => 60. */
+/** The origin engine's `CATEGORY_HALF_LIFE_DAYS` (memory_decay.py). Unknown category => 60. */
 export const CATEGORY_HALF_LIFE_DAYS: Readonly<Record<string, number>> = {
   personal_fact: 180, // Personal facts remembered longer
   preference: 90, // Preferences fade over time
@@ -38,7 +36,7 @@ export const CATEGORY_HALF_LIFE_DAYS: Readonly<Record<string, number>> = {
 export const DEFAULT_HALF_LIFE_DAYS = 60;
 
 /**
- * The origin engine's `IMPORTANCE_DECAY_FACTOR` (memory_decay.py:35), as ordered pairs.
+ * The origin engine's `IMPORTANCE_DECAY_FACTOR` (memory_decay.py), as ordered pairs.
  *
  * The origin engine scans `sorted(..., reverse=True)` and takes the FIRST threshold that is
  * `<= importance`, so this list is already in descending threshold order and is
@@ -56,7 +54,7 @@ export const IMPORTANCE_DECAY_FACTOR: ReadonlyArray<readonly [number, number]> =
 /** The origin engine: each access adds 5 days to the half-life. */
 export const ACCESS_REINFORCEMENT_DAYS = 5;
 
-/** Floors — "very important memories never fully fade" (memory_decay.py:85). */
+/** Floors — "very important memories never fully fade" (memory_decay.py). */
 export const STRENGTH_FLOOR_HIGH = 0.3; // importance >= 0.8
 export const STRENGTH_FLOOR_MEDIUM = 0.1; // importance >= 0.6
 

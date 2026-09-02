@@ -12,7 +12,7 @@
  *   npm i node-llama-cpp better-sqlite3
  *   # and a GGUF embedding model on disk, e.g. nomic-embed-text-v1.5.Q4_K_M.gguf
  *
- * Run:
+ * Run (`tsx` is fetched by npx; it is not a devDependency):
  *   MODEL_PATH=/path/to/model.gguf npx tsx examples/node-llama-cpp.ts
  */
 
@@ -56,6 +56,11 @@ async function main(): Promise<void> {
   for (const hit of await limbic.retrieve("tell me about the pet", 3)) {
     console.log(`${hit.score.toFixed(4)}  ${hit.memory.content}`);
   }
+
+  // Release the SQLite handle and the loaded GGUF model. This example exits
+  // right after, but as the reference usage it must not teach a long-running
+  // caller to leak both.
+  await limbic.close();
 }
 
 main().catch((error: unknown) => {

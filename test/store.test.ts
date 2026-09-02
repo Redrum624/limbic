@@ -4,9 +4,9 @@
  * `describeStoreContract` is the whole point of this file: a backend is only a
  * limbic store if it is indistinguishable from the others through the
  * interface — same ordering, same case folding, same behaviour on unknown ids,
- * same round trip for a `Float32Array` embedding. Adding a backend (the
- * `SqliteCipherStore` the plan floats for wellness_companion, say) means adding
- * one call here, not a second pile of tests.
+ * same round trip for a `Float32Array` embedding. Adding a backend (a future
+ * encrypted SQLite store, say) means adding one call here, not a second pile
+ * of tests.
  */
 
 import { mkdtempSync, rmSync } from "node:fs";

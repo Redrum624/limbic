@@ -6,7 +6,7 @@
  *
  * | | |
  * |---|---|
- * | fixture | `C:\Dev\divsel\test-assets\golden-selection.json`, copied byte-for-byte |
+ * | fixture | divsel's `test-assets/golden-selection.json`, copied byte-for-byte |
  * | fixture commit | `d0f8ac8` — `test(golden): complete the CONFORMANCE.md contract, add cases 21-22` (2026-08-25) |
  * | fixture `upstream_sha256` | `73713cd2d7ec9bb23659a9ee05235600e3fa358b318f2095c3eb80eab2e458a7` |
  * | schema / generator | `1` / `divsel 0.1.0`, 22 cases |
@@ -21,8 +21,8 @@
  *
  * ## The rules this file implements
  *
- * `docs/CONFORMANCE.md` changed **normatively** after divsel's lot-11 ledger
- * checkpoint, at `e9447ac` and `9262375`. The superseded blanket bound
+ * `docs/CONFORMANCE.md` changed **normatively** after the fixture was first
+ * cut, at `e9447ac` and `9262375`. The superseded blanket bound
  * `abs(actual - expected) <= f_rel * max(1, abs(expected))` applied to every
  * field was measured to fail correct ports **69 times, by up to 8.1x**, and is
  * replaced by:
@@ -55,6 +55,20 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { gistSelectFull, type GistSelectOptions, type Metric, type UtilityKind } from "../src/diversity.js";
+import {
+  Coverage,
+  FacilityLocation,
+  Linear,
+  Points,
+  approxDiameter,
+  divWithDmax,
+  evalG,
+  exhaustiveThresholdSet,
+  thresholdsWithBound,
+  type GistResult,
+  type Stage,
+  type Utility,
+} from "../src/internal/gist.js";
 
 /** The fixture bytes as committed in divsel at `d0f8ac8`. */
 const FIXTURE_SHA256 = "73713cd2d7ec9bb23659a9ee05235600e3fa358b318f2095c3eb80eab2e458a7";
@@ -203,5 +217,218 @@ describe("f32 kernel fidelity — tighter than conformance requires", () => {
     // eslint-disable-next-line no-console
     console.log(`worst tolerance-budget share over 22 cases x 5 fields: ${worstShare} (${worstLabel})`);
     expect(worstShare).toBeLessThanOrEqual(1e-3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Mutation sensitivity — the reader is not vacuous, measured
+// ---------------------------------------------------------------------------
+
+/**
+ * CONFORMANCE.md publishes how many of the 22 cases each of four deliberate
+ * rule mutations fails — measured there by injecting the bug into a port and
+ * grading it against the fixture. This block repeats that measurement against
+ * limbic's own algorithm, so the counts are asserted rather than quoted:
+ *
+ * * rule 2, strict `>` in the sweep fold — "changes the reported stage or
+ *   threshold of 15 of the 22 cases";
+ * * rule 1, argmax ties to the highest index — fails cases 10 and 18 plus
+ *   1, 2, 3, 8, 9, 12, 17: nine;
+ * * `lambda` doubled — "caught on 20 of the 22 cases";
+ * * rule 4, `div(|S| <= 1) = 0` instead of `d_max` — pinned by case 7 alone.
+ *
+ * The mutations sit inside Algorithm 1's driver, which the public surface
+ * cannot reach, so the driver below is a clone of `gist()` built from the same
+ * exported primitives (`Points`, the utilities, `evalG`, `divWithDmax`, the
+ * threshold builders, `approxDiameter`). The first test proves the clone is
+ * behaviourally identical to `gistSelectFull` — every field, all 22 cases —
+ * which is what makes mutating the clone a measurement of limbic's algorithm
+ * and not of a strawman.
+ */
+
+/** The four seams the mutations act on; all absent means "faithful clone". */
+interface Mutation {
+  /** Rule 2: fold the sweep with `>` instead of `>=`. */
+  strictFold?: boolean;
+  /** Rule 1: greedy argmax ties go to the highest index instead of the lowest. */
+  argmaxHighest?: boolean;
+  /** Multiply the case's `lam` (2 = the doubled-lambda port). */
+  lamFactor?: number;
+  /** Rule 4: `div(|S| <= 1) = 0` instead of `d_max`. */
+  divSingletonZero?: boolean;
+}
+
+/** `a.total_cmp(&b) == Greater` — the ordering every divsel argmax resolves with. */
+function totalGreater(a: number, b: number): boolean {
+  if (a > b) return true;
+  if (a < b) return false;
+  if (Number.isNaN(a)) return !Number.isNaN(b);
+  if (Number.isNaN(b)) return false;
+  return Object.is(a, 0) && Object.is(b, -0);
+}
+
+/** `GIS(d)` as in `greedyIndependentSet`, with rule 1's tie-break as a seam. */
+function gisClone(
+  pts: Points,
+  util: Utility,
+  d: number,
+  k: number,
+  argmaxHighest: boolean,
+): number[] {
+  util.reset();
+  const budget = Math.min(k, pts.n);
+  const nearest = new Float32Array(pts.n).fill(Number.POSITIVE_INFINITY);
+  const chosen = new Uint8Array(pts.n);
+  const selected: number[] = [];
+  while (selected.length < budget) {
+    let bestGain = 0;
+    let bestIndex = -1;
+    for (let v = 0; v < pts.n; v++) {
+      if (chosen[v] === 1 || nearest[v]! < d) continue;
+      const gain = util.marginal(v, selected, pts);
+      // Faithful: replace only on strictly greater gain (lowest index wins).
+      // Mutated: replace on ties too, so the highest index wins.
+      const wins = argmaxHighest ? !totalGreater(bestGain, gain) : totalGreater(gain, bestGain);
+      if (bestIndex === -1 || wins) {
+        bestGain = gain;
+        bestIndex = v;
+      }
+    }
+    if (bestIndex === -1) break;
+    selected.push(bestIndex);
+    util.commit(bestIndex, pts);
+    chosen[bestIndex] = 1;
+    nearest[bestIndex] = Number.NEGATIVE_INFINITY;
+    for (let v = 0; v < pts.n; v++) {
+      if (chosen[v] === 0) nearest[v] = Math.min(nearest[v]!, pts.dist(v, bestIndex));
+    }
+  }
+  return selected;
+}
+
+function buildUtil(pts: Points, c: GoldenCase): Utility {
+  switch (c.utility) {
+    case "linear":
+      return c.utilities === null
+        ? Linear.uniform(pts.n)
+        : new Linear(c.utilities as number[]);
+    case "coverage": {
+      const sets = c.utilities as number[][];
+      return new Coverage(sets, Coverage.inferUniverse(sets));
+    }
+    case "facility_location":
+      return new FacilityLocation(pts);
+  }
+}
+
+/** Algorithm 1's driver, statement-for-statement as `gist()`, seams added. */
+function gistClone(c: GoldenCase, mut: Mutation): GistResult {
+  const pts = new Points(c.vectors, c.metric);
+  const util = buildUtil(pts, c);
+  const lam = (mut.lamFactor ?? 1) * c.lam;
+  const eps = Math.fround(c.eps);
+  const k = Math.min(c.k, pts.n);
+  const [dMax, u, v] =
+    c.diameter === "approx" ? approxDiameter(pts, c.diameter_sweeps) : pts.diameter();
+
+  const evaluate = (s: readonly number[]): [number, number, number] => {
+    const gValue = evalG(util, s, pts);
+    const divValue = mut.divSingletonZero && s.length <= 1 ? 0 : divWithDmax(pts, s, dMax);
+    return [gValue + (lam === 0 ? 0 : lam * divValue), gValue, divValue];
+  };
+
+  let selected = gisClone(pts, util, 0, k, mut.argmaxHighest ?? false);
+  let [f, g, div] = evaluate(selected);
+  let stage: Stage = "greedy";
+  let threshold = 0;
+
+  if (k >= 2 && pts.n >= 2) {
+    const pair = [Math.min(u, v), Math.max(u, v)];
+    const [fPair, gPair, divPair] = evaluate(pair);
+    if (fPair > f) {
+      selected = pair;
+      f = fPair;
+      g = gPair;
+      div = divPair;
+      stage = "diameter_pair";
+      threshold = dMax;
+    }
+  }
+
+  if (dMax > 0) {
+    const set = c.exhaustive_thresholds
+      ? exhaustiveThresholdSet(pts)
+      : thresholdsWithBound(dMax, eps, (c.diameter === "approx" ? 4 : 2) / eps);
+    for (const d of set) {
+      const candidate = gisClone(pts, util, d, k, mut.argmaxHighest ?? false);
+      const [fc, gc, divc] = evaluate(candidate);
+      const wins = mut.strictFold ? fc > f : fc >= f;
+      if (wins) {
+        selected = candidate;
+        f = fc;
+        g = gc;
+        div = divc;
+        stage = "sweep";
+        threshold = d;
+      }
+    }
+  }
+  return { selected, f, g, div, threshold, stage, dMax };
+}
+
+/** One case, graded under the full contract; true = every field conforms. */
+function conforms(r: GistResult, c: GoldenCase): boolean {
+  return (
+    r.selected.length === c.expected_selected.length &&
+    r.selected.every((x, i) => x === c.expected_selected[i]) &&
+    r.stage === c.expected_stage &&
+    Math.abs(r.g - c.expected_g) <= tol(c.expected_g) &&
+    Math.abs(r.div - c.expected_div) <= tol(c.expected_div) &&
+    Math.abs(r.dMax - c.expected_d_max) <= tol(c.expected_d_max) &&
+    Math.abs(r.threshold - c.expected_threshold) <= tol(c.expected_threshold) &&
+    // The derived bound uses the CASE's lam, not a mutated one — the contract
+    // grades a port against the committed parameters.
+    Math.abs(r.f - c.expected_f) <= tol(c.expected_g) + c.lam * tol(c.expected_div)
+  );
+}
+
+describe("mutation sensitivity — CONFORMANCE.md's published counts, reproduced", () => {
+  it("the unmutated clone is field-identical to gistSelectFull on all 22 cases", () => {
+    for (const c of golden.cases) {
+      const r = gistSelectFull(c.vectors, c.utilities, c.k, c.lam, c.eps, {
+        metric: c.metric,
+        utility: c.utility,
+        exhaustiveThresholds: c.exhaustive_thresholds,
+        diameter: c.diameter,
+        diameterSweeps: c.diameter_sweeps,
+      });
+      const clone = gistClone(c, {});
+      expect(clone.selected, c.name).toEqual(r.selected);
+      expect(clone.stage, c.name).toBe(r.stage);
+      expect(clone.f, c.name).toBe(r.f);
+      expect(clone.g, c.name).toBe(r.g);
+      expect(clone.div, c.name).toBe(r.div);
+      expect(clone.threshold, c.name).toBe(r.threshold);
+      expect(clone.dMax, c.name).toBe(r.dMax);
+    }
+  });
+
+  const failingCases = (mut: Mutation): string[] =>
+    golden.cases.filter((c) => !conforms(gistClone(c, mut), c)).map((c) => c.name);
+
+  const MUTATIONS: ReadonlyArray<{ name: string; mut: Mutation; fails: number }> = [
+    { name: "strict `>` in the sweep fold (rule 2)", mut: { strictFold: true }, fails: 15 },
+    { name: "argmax ties to the highest index (rule 1)", mut: { argmaxHighest: true }, fails: 9 },
+    { name: "lambda doubled", mut: { lamFactor: 2 }, fails: 20 },
+  ];
+
+  for (const { name, mut, fails } of MUTATIONS) {
+    it(`${name} fails ${fails} of 22`, () => {
+      expect(failingCases(mut)).toHaveLength(fails);
+    });
+  }
+
+  it("div(|S| <= 1) = 0 instead of d_max (rule 4) fails case 7 alone", () => {
+    expect(failingCases({ divSingletonZero: true })).toEqual(["k_one_div_equals_dmax"]);
   });
 });

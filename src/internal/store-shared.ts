@@ -8,24 +8,41 @@
  *
  *   - pool ordering: `importance DESC, last_accessed DESC, id ASC`, matching
  *     the origin engine's `ORDER BY importance DESC, last_accessed DESC`
- *     (`server/memory/memory_service.py:337`, `:408`, `:421`, `:435`). The
+ *     (`memory_service.py`). The
  *     trailing `id ASC` is limbic's addition: the origin engine's two-key sort leaves ties
  *     in whatever order the engine returns them, which is not a contract two
  *     different stores can both satisfy.
  *   - search: substring over `content` and over each keyword, case-insensitive
  *     the way SQLite's `lower()` is case-insensitive, i.e. ASCII-only. The origin engine
  *     searches with `content LIKE '%q%' OR keywords LIKE '%q%'`
- *     (`memory_service.py:484`-ish region); limbic matches per keyword instead
+ *     (`memory_service.py`); limbic matches per keyword instead
  *     of against the serialized column so the result cannot depend on how the
  *     keyword list happens to be encoded on disk.
  *
- * Internal module: nothing here is exported from `src/index.ts`.
+ * Internal module — but not entirely private: `src/index.ts` re-exports
+ * `DEFAULT_ALL_LIMIT` (via `store.ts`) and the `DecayCandidate` type.
  */
 
 import type { Memory } from "../types.js";
 
 /** Default page size of a pool read. The origin engine's retrieval pool reads the same shape. */
 export const DEFAULT_ALL_LIMIT = 200;
+
+/**
+ * The scalar slice of a row that `decayPass` reads — everything
+ * `calculateDecay` needs plus the `id` to delete by, and nothing else.
+ * A store may expose `decayCandidates(): AsyncIterable<DecayCandidate>`
+ * (`SqliteStore` does) to stream these without materialising embedding
+ * vectors; `decayPass` feature-detects it and otherwise falls back to `all()`.
+ */
+export interface DecayCandidate {
+  id: string;
+  category: string;
+  importance: number;
+  createdAt: string;
+  lastAccessed: string;
+  accessCount: number;
+}
 
 /**
  * Lower-case exactly the 26 ASCII letters.

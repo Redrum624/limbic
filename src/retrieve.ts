@@ -1,8 +1,8 @@
 /**
  * The retrieval pipeline: score the pool, then diversify it with GIST.
  *
- * Ported from the origin engine's `server/memory/retrieval_service.py` — `retrieve_relevant`
- * and the `_apply_diversity` / `_fill_preserving_spread` pair (`:300-424`).
+ * Ported from the origin engine's `retrieval_service.py` — `retrieve_relevant`
+ * and the `_apply_diversity` / `_fill_preserving_spread` pair.
  *
  * The shape is deliberately the origin engine's, including the parts that look like
  * over-engineering until you have watched them fail:

@@ -1,11 +1,11 @@
 /**
- * Type-level sanity for the 0.1.0 surface (plan Task 1).
+ * Type-level sanity for the 0.1.0 surface.
  *
  * These assertions are enforced by `tsc --noEmit`, which runs over `test/` as
  * well as `src/`: `expectTypeOf` is a compile-time check with a no-op runtime.
- * The runtime `expect`s pin the three constants that later tasks read as
- * contract values, so a stray edit to a weight fails here and not four tasks
- * downstream inside a golden-parity diff.
+ * The runtime `expect`s pin the constants the scoring and extraction suites
+ * read as contract values, so a stray edit to a weight fails here and not
+ * somewhere downstream inside a golden-parity diff.
  */
 
 import { describe, expect, expectTypeOf, it } from "vitest";
@@ -22,7 +22,7 @@ import {
 } from "../src/types.js";
 
 describe("core types", () => {
-  it("DEFAULT_WEIGHTS matches the origin engine retrieval_service.py:86-89 and sums to 1", () => {
+  it("DEFAULT_WEIGHTS matches the origin engine retrieval_service.py and sums to 1", () => {
     expect(DEFAULT_WEIGHTS).toEqual({
       recency: 0.25,
       importance: 0.35,

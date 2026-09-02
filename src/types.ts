@@ -2,9 +2,9 @@
  * limbic core types — the 0.1.0 public type surface.
  *
  * Ported from the origin engine, a production Python memory engine:
- *   - `server/memory/models.py`            (`Memory`, `Conversation`)
- *   - `server/memory/memory_extraction.py` (`ExtractedMemory`, `feeling` default "neutral")
- *   - `server/memory/retrieval_service.py` (scoring weights, half-life, blend)
+ *   - `models.py`            (`Memory`, `Conversation`)
+ *   - `memory_extraction.py` (`ExtractedMemory`, `feeling` default "neutral")
+ *   - `retrieval_service.py` (scoring weights, half-life, blend)
  *
  * Deliberate deviations from the Python reference are documented in the
  * README's parity section.

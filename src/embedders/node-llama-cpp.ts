@@ -66,6 +66,9 @@ export class NodeLlamaCppEmbedder implements Embedder {
   #context: EmbeddingContextLike | undefined;
   #modelHandle: ModelLike | undefined;
   #pending: Promise<EmbeddingContextLike> | undefined;
+  // Bumped by dispose(). A load that started under an older epoch must not
+  // install its context: dispose() already released the model it belongs to.
+  #epoch = 0;
 
   constructor(options: NodeLlamaCppEmbedderOptions) {
     if (!options || typeof options.modelPath !== "string" || options.modelPath.length === 0) {
@@ -104,12 +107,24 @@ export class NodeLlamaCppEmbedder implements Embedder {
       );
     }
 
+    const epoch = this.#epoch;
+    let context: EmbeddingContextLike;
     try {
       const llama = await mod.getLlama();
       const model = await llama.loadModel({ modelPath: this.modelPath });
       this.#modelHandle = model;
-      return await model.createEmbeddingContext(this.#contextOptions);
+      context = await model.createEmbeddingContext(this.#contextOptions);
     } catch (cause) {
+      // A model loaded by this failed attempt must not outlive it: the next
+      // embed() re-runs #open(), and a kept handle would mean a second full
+      // native model load stacked on the first, once per retry.
+      const model = this.#modelHandle;
+      this.#modelHandle = undefined;
+      try {
+        await model?.dispose?.();
+      } catch {
+        // The load failure is the error worth reporting, not the cleanup's.
+      }
       throw new EmbedderUnavailableError(
         ADAPTER,
         `could not load the embedding model at ${this.modelPath}: ${
@@ -118,6 +133,22 @@ export class NodeLlamaCppEmbedder implements Embedder {
         { cause },
       );
     }
+
+    if (this.#epoch !== epoch) {
+      // dispose() ran while the load was in flight and has already released
+      // the model this context sits on; keeping the context would leak it and
+      // point it at freed native state. Release it and fail the embed loudly.
+      try {
+        await context.dispose?.();
+      } catch {
+        // The disposal race is the error worth reporting, not the cleanup's.
+      }
+      throw new EmbedderUnavailableError(
+        ADAPTER,
+        "disposed while the embedding model was loading — call embed() again to reload",
+      );
+    }
+    return context;
   }
 
   async embed(texts: string[]): Promise<Float32Array[]> {
@@ -144,8 +175,13 @@ export class NodeLlamaCppEmbedder implements Embedder {
     return out;
   }
 
-  /** Release the embedding context and the model. Safe to call twice. */
+  /**
+   * Release the embedding context and the model. Safe to call twice, and safe
+   * while a load is in flight: that load sees the epoch change, releases the
+   * context it produced and rejects instead of resurrecting it.
+   */
   async dispose(): Promise<void> {
+    this.#epoch += 1;
     const context = this.#context;
     const model = this.#modelHandle;
     this.#context = undefined;

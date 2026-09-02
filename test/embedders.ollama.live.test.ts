@@ -1,20 +1,25 @@
 /**
- * OllamaEmbedder against a REAL local Ollama.
+ * OllamaEmbedder against a REAL local Ollama — **opt-in via `LIMBIC_LIVE=1`**.
  *
- * This is the only test in the suite that touches the network, and it is
- * deliberately in the default run rather than under `test/integration/`
- * (which `vitest.config.ts` excludes outright): a test that never executes
- * proves nothing, and this one is the only evidence that the ported endpoint,
- * body keys and response field are right against the actual server rather than
- * against a stub that agrees with the code by construction.
+ * The default suite makes zero network calls: without `LIMBIC_LIVE=1` this
+ * whole file is inert — no probe, no request, every test skipped loudly. The
+ * gate is opt-in rather than opt-out because a default `vitest run` (and CI)
+ * must never send test strings to whatever answers at `LIMBIC_OLLAMA_HOST`.
  *
- * It probes the host once and SKIPS the whole block when nothing answers, so
- * CI — and any machine without Ollama — stays green. It never starts, pulls or
- * installs anything.
+ *     LIMBIC_LIVE=1 npx vitest run test/embedders.ollama.live.test.ts
  *
- * Host is `127.0.0.1`, never `localhost`: on this dual-stack Windows box
- * `localhost` resolves `::1` first while Ollama binds IPv4, which measured at
- * ~2.1 s per request against a few ms for the literal address.
+ * Optionally set `LIMBIC_OLLAMA_HOST` (default `http://127.0.0.1:11434`) and
+ * `LIMBIC_OLLAMA_MODEL` (default `nomic-embed-text`). The file stays in the
+ * suite rather than being culled: a test that never executes proves nothing,
+ * and this one is the only evidence that the ported endpoint, body keys and
+ * response field are right against the actual server rather than against a
+ * stub that agrees with the code by construction. When opted in, it probes the
+ * host once and skips the block when nothing answers; it never starts, pulls
+ * or installs anything.
+ *
+ * Host is `127.0.0.1`, never `localhost`: on a dual-stack host where Ollama
+ * binds IPv4 only, `localhost` can resolve `::1` first — measured 2026-08-27
+ * at ~2.1 s per request against a few ms for the literal address.
  */
 
 import { describe, expect, it } from "vitest";
@@ -22,6 +27,7 @@ import { describe, expect, it } from "vitest";
 import { OllamaEmbedder } from "../src/embedders/ollama.js";
 import { cosine } from "../src/internal/vec.js";
 
+const LIVE = process.env["LIMBIC_LIVE"] === "1";
 const HOST = process.env["LIMBIC_OLLAMA_HOST"] ?? "http://127.0.0.1:11434";
 const MODEL = process.env["LIMBIC_OLLAMA_MODEL"] ?? "nomic-embed-text";
 const PROBE_TIMEOUT_MS = 1_500;
@@ -39,11 +45,15 @@ async function probe(): Promise<string[] | null> {
   }
 }
 
-const tags = await probe();
+// The env gate comes first: without it, not even the probe runs.
+const tags = LIVE ? await probe() : null;
 const modelPresent =
   tags !== null && tags.some((name) => name === MODEL || name.startsWith(`${MODEL}:`));
 
-if (tags === null) {
+if (!LIVE) {
+  // eslint-disable-next-line no-console
+  console.info("[live] skipping: set LIMBIC_LIVE=1 to run the live Ollama tests");
+} else if (tags === null) {
   // eslint-disable-next-line no-console
   console.info(`[live] skipping: no Ollama at ${HOST}`);
 } else if (!modelPresent) {
@@ -84,7 +94,7 @@ describe.skipIf(!modelPresent)(`OllamaEmbedder against a real ${MODEL}`, () => {
    * of exactly 0.0 against "coffee" and must still outrank "User's manager is
    * called Dave".
    *
-   * ⚠️ Measured on this machine, 2026-08-27, `nomic-embed-text:latest`
+   * ⚠️ Measured 2026-08-27 with `nomic-embed-text:latest`
    * (F16, 137M, 768-d), via `/api/embed`:
    *
    *   text sent verbatim          flat_whites 0.375108  dave 0.383352  portuguese 0.438127

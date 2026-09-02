@@ -1,8 +1,7 @@
 /**
  * Ollama embedder — the default, and the only network call limbic ever makes.
  *
- * Endpoint parity with the origin engine's `server/services/ollama_client.py` `embeddings()`
- * (L238-261, verified at origin-engine commit `ff9c407c`):
+ * Endpoint parity with the origin engine's `ollama_client.py` `embeddings()`:
  *
  *   POST {host}/api/embed
  *   body {"model": ..., "input": ...}
@@ -14,9 +13,9 @@
  * texts costs ONE round trip.
  *
  * ⚠️ The default host is `127.0.0.1`, not `localhost`. On a dual-stack Windows
- * box `localhost` resolves to `::1` first, Ollama listens on IPv4 only, and the
- * connection eats a full DNS/connect fallback before it succeeds — measured at
- * roughly 2.1 s per request on this machine versus a few ms for `127.0.0.1`.
+ * host where Ollama binds IPv4 only, `localhost` resolves to `::1` first and
+ * the connection eats a full DNS/connect fallback before it succeeds — measured
+ * at roughly 2.1 s per request (2026-08-27) versus a few ms for `127.0.0.1`.
  * That is a resolver artifact, not an Ollama one, but the default should not
  * cost a caller two seconds a turn. Pass `host` explicitly to override.
  */
@@ -45,7 +44,7 @@ export interface OllamaEmbedderOptions {
   host?: string;
   /** e.g. `"nomic-embed-text"`. Required: there is no sensible default model. */
   model: string;
-  /** Per-request timeout. Default 30 s. */
+  /** Per-request timeout, covering connect through the full body read. Default 30 s. */
   timeoutMs?: number;
   /** Injectable for tests; defaults to the global `fetch` (Node >= 20). */
   fetch?: FetchLike;
@@ -58,6 +57,31 @@ const ADAPTER = "ollama";
 
 function stripTrailingSlash(host: string): string {
   return host.endsWith("/") ? host.slice(0, -1) : host;
+}
+
+/**
+ * A bad host is a programming error, so it fails at construction as a
+ * `TypeError` — not later as a misleading "Ollama unreachable"
+ * `EmbedderUnavailableError` that `remember()`/`retrieve()` would swallow.
+ * Notably, Ollama's own `OLLAMA_HOST` shorthand (`127.0.0.1:11434`) is not a
+ * URL and is rejected here with a hint.
+ */
+function validateHost(host: string): string {
+  let url: URL;
+  try {
+    url = new URL(host);
+  } catch (cause) {
+    throw new TypeError(
+      `OllamaEmbedder host is not a URL: ${JSON.stringify(host)} — expected e.g. "${DEFAULT_OLLAMA_HOST}"`,
+      { cause },
+    );
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new TypeError(
+      `OllamaEmbedder host must use http: or https:, got ${url.protocol} in ${JSON.stringify(host)}`,
+    );
+  }
+  return stripTrailingSlash(host);
 }
 
 export class OllamaEmbedder implements Embedder {
@@ -74,7 +98,7 @@ export class OllamaEmbedder implements Embedder {
       throw new TypeError("OllamaEmbedder requires a non-empty `model`");
     }
     this.model = options.model;
-    this.host = stripTrailingSlash(options.host ?? DEFAULT_OLLAMA_HOST);
+    this.host = validateHost(options.host ?? DEFAULT_OLLAMA_HOST);
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
     const impl = options.fetch ?? (globalThis.fetch as unknown as FetchLike | undefined);
@@ -106,51 +130,56 @@ export class OllamaEmbedder implements Embedder {
     // Node keeps the event loop alive for a pending timer; this one must not.
     (timer as unknown as { unref?: () => void }).unref?.();
 
-    let response: Awaited<ReturnType<FetchLike>>;
+    // One timer bounds the WHOLE exchange. Clearing it as soon as the headers
+    // arrive would let a server that stalls the body hang text()/json() — and
+    // with them the pending remember()/retrieve() — forever.
     try {
-      response = await this.#fetch(this.endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ model: this.model, input: texts }),
-        signal: controller.signal,
-      });
-    } catch (cause) {
-      throw new EmbedderUnavailableError(
-        ADAPTER,
-        `Ollama unreachable at ${this.endpoint}: ${describe(cause)}`,
-        { cause },
-      );
+      let response: Awaited<ReturnType<FetchLike>>;
+      try {
+        response = await this.#fetch(this.endpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ model: this.model, input: texts }),
+          signal: controller.signal,
+        });
+      } catch (cause) {
+        throw new EmbedderUnavailableError(
+          ADAPTER,
+          `Ollama unreachable at ${this.endpoint}: ${describe(cause)}`,
+          { cause },
+        );
+      }
+
+      if (!response.ok) {
+        let detail = "";
+        try {
+          detail = (await response.text()).slice(0, 200);
+        } catch {
+          // A body we cannot read is not more interesting than the status.
+        }
+        throw new EmbedderUnavailableError(
+          ADAPTER,
+          `Ollama returned ${response.status}${
+            response.statusText ? ` ${response.statusText}` : ""
+          } from ${this.endpoint}${detail ? `: ${detail}` : ""}`,
+        );
+      }
+
+      let payload: unknown;
+      try {
+        payload = await response.json();
+      } catch (cause) {
+        throw new EmbedderUnavailableError(
+          ADAPTER,
+          `Ollama returned a non-JSON body from ${this.endpoint}: ${describe(cause)}`,
+          { cause },
+        );
+      }
+
+      return parseEmbeddings(payload, texts.length, this.endpoint);
     } finally {
       clearTimeout(timer);
     }
-
-    if (!response.ok) {
-      let detail = "";
-      try {
-        detail = (await response.text()).slice(0, 200);
-      } catch {
-        // A body we cannot read is not more interesting than the status.
-      }
-      throw new EmbedderUnavailableError(
-        ADAPTER,
-        `Ollama returned ${response.status}${
-          response.statusText ? ` ${response.statusText}` : ""
-        } from ${this.endpoint}${detail ? `: ${detail}` : ""}`,
-      );
-    }
-
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch (cause) {
-      throw new EmbedderUnavailableError(
-        ADAPTER,
-        `Ollama returned a non-JSON body from ${this.endpoint}: ${describe(cause)}`,
-        { cause },
-      );
-    }
-
-    return parseEmbeddings(payload, texts.length, this.endpoint);
   }
 }
 

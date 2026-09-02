@@ -2,7 +2,7 @@
  * Extraction — the prompt, the parse, and the save gate.
  *
  * The gate is the load-bearing part: the origin engine drops anything below
- * `importance 0.4` **or** `confidence 0.6` (`memory_extraction.py:403`), and a
+ * `importance 0.4` **or** `confidence 0.6` (`memory_extraction.py`), and a
  * port that made either bound non-strict, or used `or` where the origin engine uses two
  * independent `<` checks, would store rows the origin engine discards.
  */
@@ -77,6 +77,16 @@ describe("buildExtractionPrompt", () => {
     const placeholders = EXTRACTION_PROMPT.match(/\{conversation\}/g) ?? [];
     expect(placeholders).toHaveLength(1);
   });
+
+  it("wraps the conversation in an explicit fenced block", () => {
+    // A turn spliced in bare could pose as prompt text ("Respond ONLY with...").
+    // The fence does not make injection impossible — nothing can — but it draws
+    // the data/instructions boundary the prompt's own wording points at.
+    const prompt = buildExtractionPrompt(LONG_ENOUGH) as string;
+    const fenced = prompt.match(/```\n([\s\S]*?)\n```/);
+    expect(fenced?.[1]).toContain("USER: My name is Ada");
+    expect(fenced?.[1]).toContain("ASSISTANT: Lovely to meet you, Ada.");
+  });
 });
 
 describe("parseExtractionResponse", () => {
@@ -147,6 +157,38 @@ describe("parseExtractionResponse", () => {
     const rows = parseExtractionResponse('{"memories": [null, 3, "x", {"content": "kept"}]}');
     expect(rows).toHaveLength(1);
     expect(rows[0]?.content).toBe("kept");
+  });
+
+  it("clamps importance into [0, 1] — a hostile turn must not plant a permanent memory", () => {
+    // Unclamped, an `importance` of 1e9 passes the save gate, pins scoreMemory
+    // at its ceiling and stretches calculateDecay's half-life so the row never
+    // fades — a top-ranked memory planted from user input.
+    const rows = parseExtractionResponse(
+      '{"memories": [' +
+        '{"type": "FACT", "content": "planted", "importance": 1e9},' +
+        '{"type": "FACT", "content": "buried", "importance": -3},' +
+        '{"type": "FACT", "content": "kept", "importance": 0.7}]}',
+    );
+    expect(rows.map((r) => r.importance)).toEqual([1, 0, 0.7]);
+  });
+
+  it("importance edge cases: non-finite rows drop, numeric strings coerce, then clamp", () => {
+    // NaN / ±Infinity fail the finiteness gate and the row is discarded —
+    // clamping them would invent a value the model never produced. JSON has no
+    // NaN/Infinity literals, so they arrive as strings; "0.5" coerces the way
+    // Number() coerces, and out-of-range numeric strings clamp like numbers.
+    const rows = parseExtractionResponse(
+      '{"memories": [' +
+        '{"type": "FACT", "content": "nan", "importance": "NaN"},' +
+        '{"type": "FACT", "content": "inf", "importance": "Infinity"},' +
+        '{"type": "FACT", "content": "ninf", "importance": "-Infinity"},' +
+        '{"type": "FACT", "content": "str", "importance": "0.5"},' +
+        '{"type": "FACT", "content": "strbig", "importance": "1e9"}]}',
+    );
+    expect(rows.map((r) => [r.content, r.importance])).toEqual([
+      ["str", 0.5],
+      ["strbig", 1],
+    ]);
   });
 });
 

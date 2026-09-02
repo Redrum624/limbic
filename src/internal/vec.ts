@@ -1,5 +1,5 @@
 /**
- * Vector operations — a port of the origin engine's `server/memory/vectorops.py`.
+ * Vector operations — a port of the origin engine's `vectorops.py`.
  *
  * The one semantic that matters for parity: `cosine` returns `null`, not `0`,
  * for every case where a similarity does not exist (either side missing or

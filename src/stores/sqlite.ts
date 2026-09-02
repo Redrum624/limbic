@@ -6,10 +6,10 @@
  * never at module load, so importing `limbic` costs nothing to a caller who
  * does not use SQLite and the core keeps its zero-required-dependency promise.
  *
- * Schema: `memories`, mirroring the origin engine's table
- * (`server/data/persona_datastore.py:94-105` plus the `embedding`,
- * `embedding_model` and `feeling` columns added at `:146-160`), in snake_case,
- * mapped to camelCase on the way out. Two deliberate differences:
+ * Schema: `memories`, mirroring the origin engine's `persona_datastore.py`
+ * table (plus its later `embedding`, `embedding_model` and `feeling` columns),
+ * in snake_case, mapped to camelCase on the way out. Two deliberate
+ * differences:
  *
  *   - `id` is `TEXT PRIMARY KEY`, not `INTEGER PRIMARY KEY AUTOINCREMENT`:
  *     limbic memories carry caller-supplied string ids. Importing an origin-engine
@@ -33,6 +33,7 @@ import {
   assertStorable,
   cloneMemory,
   matchesQuery,
+  type DecayCandidate,
 } from "../internal/store-shared.js";
 
 /** Thrown when `better-sqlite3` is not installed. */
@@ -108,6 +109,25 @@ const COLUMNS =
 
 const ORDER_BY = "ORDER BY importance DESC, last_accessed DESC, id ASC";
 
+/**
+ * Page size of {@link SqliteStore.decayCandidates}. Bounds the transient heap
+ * of a decay scan at one page of six scalar columns — on the order of 100 KB
+ * at 1000 rows — where `all(count)` would materialise every row including its
+ * embedding BLOB (~3 KB per 768-dim float32 vector).
+ */
+export const DECAY_SCAN_PAGE = 1000;
+
+const DECAY_COLUMNS = "id, category, importance, created_at, last_accessed, access_count";
+
+interface DecayRow {
+  id: string;
+  category: string;
+  importance: number;
+  created_at: string;
+  last_accessed: string;
+  access_count: number;
+}
+
 /** Node runs little-endian on every platform it supports; this asserts it rather than assuming. */
 const LITTLE_ENDIAN = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1;
 
@@ -145,8 +165,13 @@ function decodeKeywords(raw: string | null): string[] {
   const trimmed = raw.trim();
   if (trimmed.length === 0) return [];
   if (trimmed.startsWith("[")) {
-    const parsed: unknown = JSON.parse(trimmed);
-    if (Array.isArray(parsed)) return parsed.map((k) => String(k));
+    try {
+      const parsed: unknown = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.map((k) => String(k));
+    } catch {
+      // A hand-edited or imported row must not abort a whole get/all/search
+      // scan with a SyntaxError; read it like the legacy form below instead.
+    }
   }
   // Legacy: an origin-engine table stores `",".join(keywords)`.
   return trimmed
@@ -181,11 +206,27 @@ function rowToMemory(row: MemoryRow): Memory {
 export class SqliteStore implements MemoryStore {
   readonly #db: SqliteDatabase;
   readonly filename: string;
+  // Every SQL string this class runs is a fixed template, so each is prepared
+  // once per store and reused: a per-call prepare() allocates a native
+  // statement that lives until GC finalises it — allocation churn and
+  // finaliser pressure under sustained load, for no benefit.
+  readonly #statements = new Map<string, SqliteStatement>();
 
   private constructor(db: SqliteDatabase, filename: string) {
     this.#db = db;
     this.filename = filename;
-    db.exec(SCHEMA);
+    try {
+      db.exec(SCHEMA);
+    } catch (cause) {
+      // The handle is already open; a schema failure (SQLITE_NOTADB, read-only
+      // volume, lock) must not strand the file descriptor on every retry.
+      try {
+        db.close();
+      } catch {
+        // The schema error is the one worth reporting, not the cleanup's.
+      }
+      throw cause;
+    }
   }
 
   /**
@@ -211,20 +252,30 @@ export class SqliteStore implements MemoryStore {
   }
 
   /** Close the underlying database handle. Further calls throw. */
+  #stmt(sql: string): SqliteStatement {
+    let statement = this.#statements.get(sql);
+    if (statement === undefined) {
+      statement = this.#db.prepare(sql);
+      this.#statements.set(sql, statement);
+    }
+    return statement;
+  }
+
   close(): void {
+    // Closing the db finalises its statements; drop ours so nothing retains
+    // handles into a closed connection.
+    this.#statements.clear();
     this.#db.close();
   }
 
   async save(m: Memory): Promise<Memory> {
     assertStorable(m);
-    this.#db
-      .prepare(
-        `INSERT OR REPLACE INTO memories (${COLUMNS})
+    this.#stmt(
+      `INSERT OR REPLACE INTO memories (${COLUMNS})
          VALUES (@id, @content, @category, @importance, @keywords, @source_message_id,
                  @created_at, @last_accessed, @access_count, @subject, @feeling,
                  @emotion_label, @emotion_intensity, @embedding, @embedding_model)`,
-      )
-      .run({
+    ).run({
         id: m.id,
         content: m.content,
         category: m.category,
@@ -245,7 +296,7 @@ export class SqliteStore implements MemoryStore {
   }
 
   async get(id: string): Promise<Memory | undefined> {
-    const row = this.#db.prepare(`SELECT ${COLUMNS} FROM memories WHERE id = ?`).get(id) as
+    const row = this.#stmt(`SELECT ${COLUMNS} FROM memories WHERE id = ?`).get(id) as
       | MemoryRow
       | undefined;
     return row === undefined ? undefined : rowToMemory(row);
@@ -253,9 +304,9 @@ export class SqliteStore implements MemoryStore {
 
   async all(limit: number = DEFAULT_ALL_LIMIT): Promise<Memory[]> {
     assertLimit(limit);
-    const rows = this.#db
-      .prepare(`SELECT ${COLUMNS} FROM memories ${ORDER_BY} LIMIT ?`)
-      .all(limit) as MemoryRow[];
+    const rows = this.#stmt(`SELECT ${COLUMNS} FROM memories ${ORDER_BY} LIMIT ?`).all(
+      limit,
+    ) as MemoryRow[];
     return rows.map(rowToMemory);
   }
 
@@ -273,7 +324,7 @@ export class SqliteStore implements MemoryStore {
     const needle = asciiLower(text);
     const out: Memory[] = [];
     if (limit === 0) return out;
-    for (const row of this.#db.prepare(`SELECT ${COLUMNS} FROM memories ${ORDER_BY}`).iterate()) {
+    for (const row of this.#stmt(`SELECT ${COLUMNS} FROM memories ${ORDER_BY}`).iterate()) {
       const memory = rowToMemory(row as MemoryRow);
       if (!matchesQuery(memory, needle)) continue;
       out.push(memory);
@@ -282,18 +333,64 @@ export class SqliteStore implements MemoryStore {
     return out;
   }
 
+  /**
+   * Scalar-only scan for `decayPass`: every row, without the `embedding` BLOB.
+   *
+   * Pages of {@link DECAY_SCAN_PAGE} rows, keyset-paged on `id` (`WHERE id > ?
+   * ORDER BY id`), for two reasons: each page is fully materialised before it
+   * is yielded, so the caller may delete rows between yields (better-sqlite3
+   * forbids writes while a statement iterator is open), and a keyset cursor —
+   * unlike OFFSET — does not slide past rows when the caller does delete.
+   * Every stored id is a non-empty string (`assertStorable`), so the `""`
+   * start cursor precedes them all under BINARY collation.
+   */
+  async *decayCandidates(): AsyncIterableIterator<DecayCandidate> {
+    let cursor = "";
+    for (;;) {
+      const rows = this.#stmt(
+        `SELECT ${DECAY_COLUMNS} FROM memories WHERE id > ? ORDER BY id ASC LIMIT ?`,
+      ).all(cursor, DECAY_SCAN_PAGE) as DecayRow[];
+      if (rows.length === 0) return;
+      for (const row of rows) {
+        yield {
+          id: row.id,
+          category: row.category,
+          importance: row.importance,
+          createdAt: row.created_at,
+          lastAccessed: row.last_accessed,
+          accessCount: row.access_count,
+        };
+      }
+      cursor = rows[rows.length - 1]!.id;
+    }
+  }
+
   async updateAccess(id: string): Promise<void> {
-    this.#db
-      .prepare("UPDATE memories SET access_count = access_count + 1, last_accessed = ? WHERE id = ?")
-      .run(new Date().toISOString(), id);
+    this.#stmt(
+      "UPDATE memories SET access_count = access_count + 1, last_accessed = ? WHERE id = ?",
+    ).run(new Date().toISOString(), id);
   }
 
   async delete(id: string): Promise<void> {
-    this.#db.prepare("DELETE FROM memories WHERE id = ?").run(id);
+    this.#stmt("DELETE FROM memories WHERE id = ?").run(id);
   }
 
   async count(): Promise<number> {
-    const row = this.#db.prepare("SELECT COUNT(*) AS n FROM memories").get() as { n: number };
+    const row = this.#stmt("SELECT COUNT(*) AS n FROM memories").get() as { n: number };
     return row.n;
   }
+}
+
+// `using store = await SqliteStore.open(...)` support. Registered dynamically
+// because `Symbol.dispose` only exists where the runtime has explicit resource
+// management (Node >= 20.4) and this file must load everywhere Node >= 20 does.
+const DISPOSE: symbol | undefined = (Symbol as { dispose?: symbol }).dispose;
+if (DISPOSE !== undefined) {
+  Object.defineProperty(SqliteStore.prototype, DISPOSE, {
+    value: function (this: SqliteStore): void {
+      this.close();
+    },
+    writable: true,
+    configurable: true,
+  });
 }

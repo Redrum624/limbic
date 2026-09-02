@@ -1,8 +1,9 @@
 /**
  * limbic — a local-first, emotion-aware, LLM-agnostic memory engine.
  *
- * Everything exported from this file is public API from 0.1.0 on. Internal
- * modules live under `src/internal/` and are not exported.
+ * Everything exported from this file is public API from 0.1.0 on. Modules
+ * under `src/internal/` are implementation: only the names this file curates
+ * out of them (the scoring surface, `DecayCandidate`) are public.
  *
  * ```ts
  * import { createLimbic } from "limbic";
@@ -16,6 +17,7 @@
 import { randomUUID } from "node:crypto";
 
 import { calculateDecay } from "./decay.js";
+import type { DecayCandidate } from "./internal/store-shared.js";
 import { extractFromConversation, type ChatTurn } from "./extraction.js";
 import { retrieve as retrievePipeline, type RetrieveOptions, type ScoredMemory } from "./retrieve.js";
 import { MemStore, type MemoryStore } from "./store.js";
@@ -44,6 +46,7 @@ export {
 
 export { DEFAULT_ALL_LIMIT, MemStore, type MemoryStore } from "./store.js";
 export { MISSING_SQLITE_PEER, SqliteStore } from "./stores/sqlite.js";
+export { type DecayCandidate } from "./internal/store-shared.js";
 
 export {
   ACCESS_REINFORCEMENT_DAYS,
@@ -131,7 +134,7 @@ export {
 
 /**
  * Below this strength a memory is deleted by {@link Limbic.decayPass}.
- * The origin engine's `memory_decay.py:126` — `if current_strength < 0.05: DELETE`.
+ * The origin engine's `memory_decay.py` — `if current_strength < 0.05: DELETE`.
  */
 export const FADE_THRESHOLD = 0.05;
 
@@ -164,6 +167,13 @@ export interface Limbic {
   retrieve(query: string, k?: number, options?: RetrieveOptions): Promise<ScoredMemory[]>;
   /** The origin engine's `apply_decay_to_memories`: recompute strength, delete what has faded. */
   decayPass(now?: Date): Promise<{ decayed: number; faded: number }>;
+  /**
+   * Release what the engine holds: close a store that has a `close()` and
+   * dispose an embedder that has a `dispose()` (both feature-detected — the
+   * default `MemStore` and absent embedder need neither). Idempotent: the
+   * second and later calls are no-ops.
+   */
+  close(): Promise<void>;
   /** The store in use, for direct access. */
   store: MemoryStore;
 }
@@ -173,6 +183,25 @@ function wholeDaysBetween(fromIso: string, now: Date): number {
   const from = Date.parse(fromIso);
   if (Number.isNaN(from)) return 0;
   return Math.floor((now.getTime() - from) / 86_400_000);
+}
+
+/**
+ * The rows `decayPass` walks, as scalar slices. A store that exposes
+ * `decayCandidates()` (`SqliteStore` does) streams them without materialising
+ * embedding vectors; any other store falls back to one `all(count)` read —
+ * for the default `MemStore` those rows already live in the heap.
+ */
+async function* decayCandidatesOf(store: MemoryStore): AsyncIterable<DecayCandidate> {
+  const scannable = store as MemoryStore & {
+    decayCandidates?: () => AsyncIterable<DecayCandidate>;
+  };
+  if (typeof scannable.decayCandidates === "function") {
+    yield* scannable.decayCandidates();
+    return;
+  }
+  const total = await store.count();
+  if (total === 0) return;
+  yield* await store.all(total);
 }
 
 /**
@@ -199,6 +228,9 @@ export function createLimbic(options: LimbicOptions = {}): Limbic {
   const instance = randomUUID().slice(0, 8);
   let seq = 0;
   const nextId = (): string => `mem_${instance}_${(++seq).toString().padStart(6, "0")}`;
+
+  // close() is idempotent by flag, not by trusting every backend's close() to be.
+  let closed = false;
 
   return {
     store,
@@ -263,11 +295,9 @@ export function createLimbic(options: LimbicOptions = {}): Limbic {
     },
 
     async decayPass(now: Date = new Date()): Promise<{ decayed: number; faded: number }> {
-      const total = await store.count();
-      const rows = total === 0 ? [] : await store.all(total);
       let decayed = 0;
       let faded = 0;
-      for (const memory of rows) {
+      for await (const memory of decayCandidatesOf(store)) {
         const strength = calculateDecay({
           originalStrength: 1,
           daysSinceCreation: wholeDaysBetween(memory.createdAt, now),
@@ -284,6 +314,19 @@ export function createLimbic(options: LimbicOptions = {}): Limbic {
         }
       }
       return { decayed, faded };
+    },
+
+    async close(): Promise<void> {
+      if (closed) return;
+      closed = true;
+      try {
+        await (embedder as (Embedder & { dispose?: () => Promise<void> | void }) | undefined)
+          ?.dispose?.();
+      } finally {
+        // A failing embedder teardown must not strand the store handle: this
+        // is the engine's one release path, and close() never runs twice.
+        await (store as MemoryStore & { close?: () => Promise<void> | void }).close?.();
+      }
     },
   };
 }

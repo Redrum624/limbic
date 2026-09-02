@@ -1,6 +1,6 @@
 /**
  * OllamaEmbedder — endpoint/body/response parity with the origin engine's
- * `server/services/ollama_client.py` `embeddings()`, exercised against a
+ * `ollama_client.py` `embeddings()`, exercised against a
  * stubbed `fetch`. No network.
  */
 
@@ -62,8 +62,9 @@ afterEach(() => {
 
 describe("OllamaEmbedder: construction", () => {
   it("defaults to 127.0.0.1, never localhost", () => {
-    // Not cosmetic: `localhost` resolves ::1 first on a dual-stack Windows box
-    // and Ollama listens on IPv4, costing ~2.1 s per request here.
+    // Not cosmetic: on a dual-stack host where Ollama binds IPv4 only,
+    // `localhost` can resolve ::1 first — measured 2026-08-27 at ~2.1 s per
+    // request against a few ms for the literal address.
     expect(DEFAULT_OLLAMA_HOST).toBe("http://127.0.0.1:11434");
     expect(DEFAULT_OLLAMA_HOST).not.toContain("localhost");
 
@@ -246,5 +247,21 @@ describe("parseEmbeddings", () => {
     const [vector] = parseEmbeddings({ embeddings: [[0.1, 0.2]] }, 1, endpoint);
     expect(vector).toBeInstanceOf(Float32Array);
     expect(vector?.[0]).toBe(Math.fround(0.1));
+  });
+});
+
+describe("the live suite stays opt-in (S-10)", () => {
+  it("short-circuits its probe behind LIMBIC_LIVE, before any network call", async () => {
+    // A source-level pin, like the fixture hashes: the property "the default
+    // run makes zero network calls" cannot be observed from inside the suite,
+    // so assert the gate itself — the env check and the short-circuit that
+    // keeps even the probe from running without it.
+    const { readFile } = await import("node:fs/promises");
+    const source = await readFile(
+      new URL("./embedders.ollama.live.test.ts", import.meta.url),
+      "utf8",
+    );
+    expect(source).toContain('process.env["LIMBIC_LIVE"] === "1"');
+    expect(source).toContain("LIVE ? await probe() : null");
   });
 });
