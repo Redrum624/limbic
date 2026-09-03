@@ -2,7 +2,7 @@
 
 ## Dev setup
 
-Node ≥ 20. Then:
+Node ≥ 22. Then:
 
 ```sh
 npm ci               # install; the prepare script also builds dist/

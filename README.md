@@ -5,7 +5,7 @@
 [![Latest release](.github/badges/latest-badge.svg)](https://github.com/Redrum624/limbic/releases/latest)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)
-![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)
+![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)
 ![Tests](https://img.shields.io/badge/tests-311%20passing-brightgreen)
 
 > **limbic** — *the brain circuitry where emotion and memory meet.*
@@ -47,7 +47,7 @@ and no default cloud provider.
 - **Lifecycle-complete.** `limbic.close()` releases whatever the engine holds —
   the SQLite handle, a loaded GGUF model, an ONNX session — and is idempotent.
 - **Dual ESM/CJS**, types for both, strict TypeScript with
-  `noUncheckedIndexedAccess`, Node ≥ 20.
+  `noUncheckedIndexedAccess`, Node ≥ 22.
 
 ## Install
 
@@ -55,7 +55,7 @@ and no default cloud provider.
 npm i limbic
 ```
 
-Node ≥ 20, zero required dependencies. The optional peers, each unlocking one
+Node ≥ 22, zero required dependencies. The optional peers, each unlocking one
 feature:
 
 ```sh

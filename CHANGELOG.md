@@ -26,6 +26,10 @@ memory leaks, mock data, docs accuracy) of the 0.1.0 tree.
 
 ### Changed
 
+- **Node ≥ 22** (was ≥ 20). `better-sqlite3` 13 declares `node >=22` and ships no Node 20
+  prebuilds, so the SQLite store tests crashed the vitest worker on Node 20; Node 20 has been
+  end-of-life since 2026-04-30. CI now runs on Node 22 and 24; the build targets `node22`.
+
 - The live Ollama suite is **opt-in** via `LIMBIC_LIVE=1`; the default run makes
   zero network calls.
 - Two metadata strings in `test/fixtures/golden-scoring.json` neutralised for
