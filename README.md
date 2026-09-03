@@ -1,5 +1,6 @@
 # limbic
 
+[![npm](https://img.shields.io/npm/v/limbic)](https://www.npmjs.com/package/limbic)
 [![Downloads](.github/badges/downloads-badge.svg)](https://github.com/Redrum624/limbic/releases)
 [![Latest release](.github/badges/latest-badge.svg)](https://github.com/Redrum624/limbic/releases/latest)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
@@ -50,9 +51,20 @@ and no default cloud provider.
 
 ## Install
 
-**Not yet on npm.** `GET https://registry.npmjs.org/limbic` returned HTTP 404 on
-2026-09-02 — the name is unclaimed and no publish has run. Until then, install
-from a checkout:
+```sh
+npm i limbic
+```
+
+Node ≥ 20, zero required dependencies. The optional peers, each unlocking one
+feature:
+
+```sh
+npm i better-sqlite3               # + SQLite persistence (SqliteStore)
+npm i node-llama-cpp               # + in-process GGUF embeddings
+npm i @huggingface/transformers    # + transformers.js embeddings
+```
+
+### From a checkout
 
 ```sh
 git clone https://github.com/Redrum624/limbic.git
@@ -61,21 +73,13 @@ npm ci        # installs dev deps; the prepare script builds dist/ for you
 npm test      # 311 passing
 ```
 
-Consume it from another project in any of the usual ways — the `prepare` script
-means all three produce a built `dist/`:
+Consume a checkout from another project in any of the usual ways — the `prepare`
+script means all three produce a built `dist/`:
 
 ```sh
 npm i /path/to/limbic                # path dependency (dist/ built by npm ci above)
 npm pack /path/to/limbic && npm i limbic-0.1.0.tgz   # tarball
 npm i github:Redrum624/limbic        # git dependency; npm runs prepare in a temp clone
-```
-
-Once published: `npm i limbic`. The optional peers, each unlocking one feature:
-
-```sh
-npm i better-sqlite3               # + SQLite persistence (SqliteStore)
-npm i node-llama-cpp               # + in-process GGUF embeddings
-npm i @huggingface/transformers    # + transformers.js embeddings
 ```
 
 ## Quickstart

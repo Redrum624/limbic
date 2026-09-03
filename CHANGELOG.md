@@ -50,9 +50,8 @@ memory leaks, mock data, docs accuracy) of the 0.1.0 tree.
 
 ## [0.1.0] — 2026-08-27
 
-First feature-complete release. **Not published to npm**: `npm publish` has not
-run, so the `limbic` name is still unclaimed and this version exists only as a
-tag and a build.
+First feature-complete release. Published to npm as `limbic@0.1.0` on
+2026-09-03 (the tag and the registry tarball carry the same sources).
 
 ### Added
 
