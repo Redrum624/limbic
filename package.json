@@ -40,7 +40,7 @@
   "scripts": {
     "build": "tsup",
     "prepare": "tsup",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build",
+    "prepublishOnly": "pnpm run typecheck && pnpm test && pnpm run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "bench": "vitest bench --run"

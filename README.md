@@ -69,8 +69,8 @@ npm i @huggingface/transformers    # + transformers.js embeddings
 ```sh
 git clone https://github.com/Redrum624/limbic.git
 cd limbic
-npm ci        # installs dev deps; the prepare script builds dist/ for you
-npm test      # 311 passing
+pnpm install --frozen-lockfile   # installs dev deps; the prepare script builds dist/ for you
+pnpm test      # 311 passing
 ```
 
 Consume a checkout from another project in any of the usual ways — the `prepare`
@@ -404,7 +404,7 @@ asserted at the fixture's own **absolute** `1e-6` on `expected_base_score`,
 
 ## Bench
 
-`npm run bench` — 60 memories, 12 planted topics × 5 near-paraphrases each,
+`pnpm bench` — 60 memories, 12 planted topics × 5 near-paraphrases each,
 dim 48, fixed seed, `k = 8`, clusters counted as connected components at
 `cosine > 0.92`.
 
@@ -421,7 +421,7 @@ dim 48, fixed seed, `k = 8`, clusters counted as connected components at
 Above the crossover the same eight slots and the same 648 prompt characters
 carry **four times the distinct facts**, and redundancy falls from "every pick
 has a near-twin" to "almost none does". Cost: a mean **≈3.7 ms** per selection
-at this size against **≈80 ns** for a slice (`npm run bench`, 2026-09-02, one
+at this size against **≈80 ns** for a slice (`pnpm bench`, 2026-09-02, one
 machine — expect drift) — GIST runs `2 + |D|` greedy passes, 32 thresholds at
 `eps = 0.1`.
 
@@ -456,11 +456,11 @@ modules → `internal`.
 ## Development
 
 ```sh
-npm ci               # install + build dist/ (prepare)
-npm test             # vitest — 311 passed | 5 skipped, no network
-npm run typecheck    # tsc --noEmit
-npm run build        # tsup — ESM + CJS + d.ts/d.cts
-npm run bench        # the redundancy bench above
+pnpm install --frozen-lockfile   # install + build dist/ (prepare)
+pnpm test             # vitest — 311 passed | 5 skipped, no network
+pnpm typecheck    # tsc --noEmit
+pnpm build        # tsup — ESM + CJS + d.ts/d.cts
+pnpm bench        # the redundancy bench above
 
 # Live Ollama integration suite — opt-in, off by default and in CI:
 LIMBIC_LIVE=1 npx vitest run test/embedders.ollama.live.test.ts

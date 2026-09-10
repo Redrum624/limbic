@@ -5,10 +5,10 @@
 Node ≥ 22. Then:
 
 ```sh
-npm ci               # install; the prepare script also builds dist/
-npm test             # vitest — must be green, and makes zero network calls
-npm run typecheck    # tsc --noEmit — must be silent
-npm run build        # tsup — ESM + CJS + types
+pnpm install --frozen-lockfile   # install; the prepare script also builds dist/
+pnpm test             # vitest — must be green, and makes zero network calls
+pnpm typecheck    # tsc --noEmit — must be silent
+pnpm build        # tsup — ESM + CJS + types
 ```
 
 The live Ollama suite is opt-in (`LIMBIC_LIVE=1`) and is never required for a
@@ -30,7 +30,7 @@ same commit, with the upstream reference stated.
 
 - Behavioural changes come with a test that fails before the change and passes
   after it. Mechanical rewording does not need one.
-- `npm test`, `npm run typecheck` and `npm run build` all green locally before
+- `pnpm test`, `pnpm typecheck` and `pnpm build` all green locally before
   you push; CI runs the same three on Node 20 and 22.
 - Don't introduce runtime dependencies. New integrations follow the existing
   pattern: an optional peer behind a dynamic `import()` with an install hint.
