@@ -1,0 +1,14 @@
+# Optional peers stay optional. limbic declares @huggingface/transformers,
+# better-sqlite3 and node-llama-cpp as optional peer dependencies; npm never
+# installed them for development, but pnpm auto-installs peers by default, which
+# pulled in onnxruntime-node, sharp and llama.cpp binaries this repo's CI never
+# needed. better-sqlite3 is still installed, as a devDependency.
+autoInstallPeers: false
+
+# pnpm 11 skips dependency install scripts unless they are allowed here, and
+# `pnpm install` fails when it skips any (ERR_PNPM_IGNORED_BUILDS). `allowBuilds`
+# is the pnpm 11 key, a package-to-boolean map; the pnpm 10
+# `onlyBuiltDependencies` list is ignored.
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
